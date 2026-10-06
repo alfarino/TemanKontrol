@@ -4,13 +4,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.temankontrol"
+    namespace = "id.temankontrol.app"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.example.temankontrol"
+        applicationId = "id.temankontrol.app"
         minSdk = 30
         targetSdk = 37
         versionCode = 1
@@ -28,11 +28,12 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
