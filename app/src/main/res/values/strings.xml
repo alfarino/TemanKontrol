@@ -1,3 +1,105 @@
-<resources>
-    <string name="app_name">TemanKontrol</string>
+﻿<resources>
+    <string name="app_name">Teman Kontrol</string>
+
+    <!-- Navigasi -->
+    <string name="nav_home">Beranda</string>
+    <string name="nav_history">Riwayat</string>
+    <string name="nav_about">Tentang</string>
+
+    <!-- Status & Filter -->
+    <string name="status_scheduled">Terjadwal</string>
+    <string name="status_completed">Selesai</string>
+    <string name="status_cancelled">Dibatalkan</string>
+    <string name="status_past_due">Lewat Jadwal</string>
+    <string name="filter_all">Semua</string>
+    <string name="priority_badge">Prioritas</string>
+
+    <!-- Microcopy C-01..C-70 -->
+    <!-- C-01: Notice Screen -->
+    <string name="notice_title">Sebelum mulai</string>
+    <string name="notice_point_1">Teman Kontrol membantu Anda menyiapkan pertanyaan, mencatat hasil, dan melacak tindak lanjut konsultasi.</string>
+    <string name="notice_point_2">Aplikasi ini bukan alat diagnosis, tidak memberi saran pengobatan, dan bukan layanan darurat. Untuk keadaan darurat, hubungi 119 atau fasilitas kesehatan terdekat.</string>
+    <string name="notice_point_3">Semua catatan Anda tulis sendiri dan hanya tersimpan di perangkat ini.</string>
+    <string name="notice_button_understand">Saya Mengerti</string>
+
+    <!-- C-10..C-15: Validasi -->
+    <string name="error_field_required">%1$s wajib diisi.</string>
+    <string name="error_field_max_length">%1$s maksimal %2$d karakter.</string>
+    <string name="error_note_empty">Isi minimal satu bagian catatan sebelum menyimpan.</string>
+    <string name="error_priority_limit">Maksimal 3 pertanyaan prioritas. Hapus tanda prioritas pada pertanyaan lain terlebih dahulu.</string>
+    <string name="error_duplicate_question">Pertanyaan ini sudah ada di kunjungan ini.</string>
+    <string name="error_invalid_date">Pilih tanggal yang valid.</string>
+
+    <!-- C-20..C-23: Sukses Feedback -->
+    <string name="msg_consultation_created">Kunjungan disimpan.</string>
+    <string name="msg_consultation_updated">Perubahan disimpan.</string>
+    <string name="msg_consultation_deleted">Kunjungan dihapus.</string>
+    <string name="msg_item_saved">Tersimpan.</string>
+
+    <!-- C-30..C-34: Dialog Konfirmasi -->
+    <string name="dialog_delete_consultation_title">Hapus kunjungan?</string>
+    <string name="dialog_delete_consultation_body">%1$d pertanyaan, catatan hasil, dan %2$d tindak lanjut juga akan terhapus. Tindakan ini tidak dapat dibatalkan.</string>
+    <string name="dialog_cancel_consultation_title">Batalkan kunjungan?</string>
+    <string name="dialog_cancel_consultation_body">Tandai kunjungan ini sebagai dibatalkan? Anda dapat mengubahnya lagi nanti.</string>
+    <string name="dialog_delete_item_title">Hapus %1$s ini?</string>
+    <string name="dialog_delete_note_title">Hapus catatan hasil konsultasi?</string>
+    <string name="dialog_unsaved_title">Buang perubahan?</string>
+    <string name="dialog_unsaved_body">Perubahan yang belum disimpan akan hilang.</string>
+    <string name="action_delete">Hapus</string>
+    <string name="action_discard">Buang</string>
+    <string name="action_cancel">Batal</string>
+    <string name="action_stay">Tetap di sini</string>
+    <string name="action_back">Kembali</string>
+    <string name="action_mark_cancelled">Tandai Dibatalkan</string>
+
+    <!-- C-40..C-42: Info & Warning Banner -->
+    <string name="banner_long_question_list">Daftar pertanyaan cukup panjang. Pastikan 3 pertanyaan terpenting ditandai prioritas.</string>
+    <string name="banner_past_due_date">Tanggal ini sudah lewat. Tetap simpan jika memang benar.</string>
+    <string name="banner_past_consultation_date">Tanggal ini sudah lewat - cocok untuk mencatat kunjungan yang sudah terjadi.</string>
+
+    <!-- C-50..C-52: Error States -->
+    <string name="error_storage_save_failed">Gagal menyimpan. Data Anda masih ada di formulir - coba lagi.</string>
+    <string name="error_data_load_failed">Data tidak dapat dimuat.</string>
+    <string name="error_consultation_not_found">Kunjungan tidak ditemukan. Mungkin sudah dihapus.</string>
+    <string name="action_retry">Coba lagi</string>
+
+    <!-- C-60..C-65: Empty States -->
+    <string name="empty_history_title">Belum ada kunjungan tercatat.</string>
+    <string name="empty_filter_title">Tidak ada kunjungan dengan status ini.</string>
+    <string name="action_show_all">Tampilkan semua</string>
+    <string name="empty_home_title">Siapkan kunjungan berikutnya. Tulis pertanyaan Anda sebelum bertemu tenaga kesehatan.</string>
+    <string name="empty_questions_title">Belum ada pertanyaan. Tulis hal yang ingin Anda tanyakan.</string>
+    <string name="empty_notes_title">Belum ada catatan hasil konsultasi.</string>
+    <string name="empty_follow_ups_title">Belum ada tindak lanjut.</string>
+    <string name="action_add_consultation">Tambah Kunjungan</string>
+
+    <!-- C-70: Tentang Data -->
+    <string name="about_data_privacy">Data hanya tersimpan di perangkat ini, tidak dikirim ke server, dan tidak ikut dicadangkan. Menghapus aplikasi akan menghapus semua catatan.</string>
+
+    <!-- Form Labels & Actions -->
+    <string name="label_title">Judul Kunjungan</string>
+    <string name="hint_title">Contoh: Kontrol Hipertensi Rutin</string>
+    <string name="label_reason">Alasan Kunjungan</string>
+    <string name="hint_reason">Contoh: Evaluasi obat tensi dan pusing</string>
+    <string name="label_facility">Fasilitas Kesehatan (Opsional)</string>
+    <string name="hint_facility">Contoh: RS Sehat Bersama</string>
+    <string name="label_provider">Tenaga Kesehatan (Opsional)</string>
+    <string name="hint_provider">Contoh: dr. Budi Santoso, Sp.PD</string>
+    <string name="label_appointment_date">Tanggal Kunjungan</string>
+    <string name="label_appointment_time">Waktu Kunjungan</string>
+    <string name="label_due_date">Tenggat (Opsional)</string>
+    <string name="action_save">Simpan</string>
+    <string name="action_edit">Ubah</string>
+    <string name="action_see_all">Lihat semua</string>
+    <string name="action_add_question">Tambah Pertanyaan</string>
+    <string name="action_add_follow_up">Tambah Tindak Lanjut</string>
+    <string name="action_edit_notes">Tulis / Ubah Catatan</string>
+
+    <!-- Form Sections: Catatan -->
+    <string name="label_note_summary">Ringkasan Pembahasan</string>
+    <string name="hint_note_summary">Poin-poin penting yang dibahas bersama dokter</string>
+    <string name="label_note_provider_instruction">Arahan Tenaga Kesehatan</string>
+    <string name="hint_note_provider_instruction">Pantangan, anjuran gaya hidup, atau jadwal kontrol berikutnya</string>
+    <string name="label_note_additional">Catatan Tambahan</string>
+    <string name="hint_note_additional">Hal lain yang perlu Anda ingat</string>
 </resources>

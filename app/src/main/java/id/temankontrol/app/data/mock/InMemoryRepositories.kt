@@ -48,7 +48,8 @@ class InMemoryConsultationRepository @Inject constructor(
                         status = c.status,
                         questionCount = consultQuestions.size,
                         discussedCount = consultQuestions.count { it.isDiscussed },
-                        openActionCount = consultActions.count { !it.isCompleted }
+                        openActionCount = consultActions.count { !it.isCompleted },
+                        isPastDue = false
                     )
                 }
         }
@@ -67,6 +68,7 @@ class InMemoryConsultationRepository @Inject constructor(
             dataStore.questions,
             dataStore.followUps
         ) { consultations, questions, followUps ->
+            val startOfToday = dataStore.startOfToday()
             consultations
                 .filter { c ->
                     when (filter) {
@@ -88,7 +90,8 @@ class InMemoryConsultationRepository @Inject constructor(
                         status = c.status,
                         questionCount = consultQuestions.size,
                         discussedCount = consultQuestions.count { it.isDiscussed },
-                        openActionCount = consultActions.count { !it.isCompleted }
+                        openActionCount = consultActions.count { !it.isCompleted },
+                        isPastDue = c.status == ConsultationStatus.SCHEDULED && c.appointmentAt < startOfToday
                     )
                 }
         }

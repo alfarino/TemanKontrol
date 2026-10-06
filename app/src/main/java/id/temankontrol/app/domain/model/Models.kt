@@ -46,7 +46,8 @@ data class ConsultationSummary(
     val status: ConsultationStatus,
     val questionCount: Int,
     val discussedCount: Int,
-    val openActionCount: Int
+    val openActionCount: Int,
+    val isPastDue: Boolean = false
 )
 
 data class Question(
