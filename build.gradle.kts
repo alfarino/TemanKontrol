@@ -2,8 +2,11 @@
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.kotlin.compose) apply false
+    alias(libs.plugins.kotlin.serialization) apply false
+    alias(libs.plugins.ksp) apply false
+    alias(libs.plugins.hilt) apply false
 }
 
 allprojects {
-    layout.buildDirectory.set(file("C:/Users/User/.gradle-builds/TemanKontrol/${project.name}"))
+    layout.buildDirectory.set(file("D:/.gradle-builds/TemanKontrol/${project.name}"))
 }
