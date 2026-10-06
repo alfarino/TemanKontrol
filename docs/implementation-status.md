@@ -143,11 +143,28 @@ Tidak ditemukan konflik internal PRD yang mengharuskan keputusan baru selama aud
   ```
   Hasil: **BUILD SUCCESSFUL** (33 tasks executed/up-to-date, unit test template passed, lint report generated tanpa error fatal).
 
-## Status Saat Ini: Phase 1 — Setup Foundation & TS-01
+## Phase 1 Progress — Setup Foundation & TS-01
 
-Langkah kerja aktif:
-1. Setup package rename: `com.example.temankontrol` → `id.temankontrol.app` (DEC-007).
-2. Konfigurasi privasi manifest: `allowBackup="false"` & data extraction rules (DEC-006, NFR-014).
-3. Pembaruan `app/build.gradle.kts` & `libs.versions.toml`: Java 17 compile options, Hilt, KSP, Room, DataStore, Navigation Compose, Splash Screen.
-4. Eksekusi **Technical Spike TS-01**: Verifikasi kompilasi Hilt + KSP + Room + Navigation Compose.
+**Status TS-01: PASS (Lolos Sempurna).**
+
+1. ✅ **Package Rename & Namespace (DEC-007):** Diperbarui ke `id.temankontrol.app` di `app/build.gradle.kts`, `AndroidManifest.xml`, source tree, dan test.
+2. ✅ **Konfigurasi Privasi & Backup (DEC-006, NFR-014):** `android:allowBackup="false"`, data extraction rules & backup rules mengecualikan semua domain.
+3. ✅ **Java 17 & Build Environment:** `compileOptions` diatur ke Java 17, `buildConfig = true`, build layout dioptimalkan di drive `D:/.gradle-builds` untuk mencegah file-locking OneDrive.
+4. ✅ **Technical Spike TS-01 Verified:**
+   - Dagger Hilt 2.60 terkonfigurasi via KSP dengan `@HiltAndroidApp` dan `@AndroidEntryPoint`.
+   - Room 2.6.1 + KSP dengan `room.generateKotlin = true` dan `room.schemaLocation` berhasil meng-generate entity & DAO tanpa signature clash.
+   - Kotlinx Serialization + Navigation Compose terintegrasi.
+   - Pustaka pendukung terpasang: DataStore Preferences, Splash Screen (`core-splashscreen`), Immutable Collections, Turbine, Coroutines Test.
+   - Eksekusi verifikasi:
+     ```powershell
+     .\gradlew.bat assembleDebug test --console=plain
+     ```
+     Hasil: **BUILD SUCCESSFUL** (51 tasks executed/up-to-date, APK debug ter-generate, unit tests hijau).
+
+## Langkah Selanjutnya (Phase 1 — Core Domain & Mock Layer):
+1. **Domain Models & Validation Rules (VR-01 s/d VR-12):** Implementasi domain model di `domain/model` dan fungsi validasi murni + unit tests di `domain/validation`.
+2. **Repository Interfaces (PRD §16.4):** Interface `ConsultationRepository`, `QuestionRepository`, `NoteRepository`, `FollowUpRepository`, `PreferencesRepository`, dan `SuggestionCatalog`.
+3. **In-Memory Mock Repositories & Scenarios (PRD §16.4):** Implementasi mock dengan state management, sample data, dan mock scenario switcher (Normal, Kosong, Error, Lambat).
+4. **Hilt Modules:** Bind mock repositories untuk pengembangan frontend Day-2.
+
 
