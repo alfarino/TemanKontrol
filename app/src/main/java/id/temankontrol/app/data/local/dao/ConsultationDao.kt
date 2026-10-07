@@ -73,4 +73,7 @@ interface ConsultationDao {
 
     @Query("SELECT COUNT(*) FROM follow_up_actions WHERE consultation_id = :id")
     suspend fun getActionCount(id: String): Int
+
+    @Query("SELECT COUNT(*) FROM consultations")
+    suspend fun countAll(): Int
 }

@@ -1,4 +1,4 @@
-﻿package id.temankontrol.app
+package id.temankontrol.app
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -9,10 +9,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import id.temankontrol.app.data.local.DatabaseSeeder
 import id.temankontrol.app.domain.repository.PreferencesRepository
 import id.temankontrol.app.navigation.AppNavHost
 import id.temankontrol.app.ui.theme.TemanKontrolTheme
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -21,8 +24,14 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var preferencesRepository: PreferencesRepository
 
+    @Inject
+    lateinit var databaseSeeder: DatabaseSeeder
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        lifecycleScope.launch {
+            databaseSeeder.seedSampleDataIfEmpty()
+        }
         enableEdgeToEdge()
         setContent {
             val isNoticeAccepted by preferencesRepository.noticeAccepted.collectAsStateWithLifecycle(initialValue = false)
