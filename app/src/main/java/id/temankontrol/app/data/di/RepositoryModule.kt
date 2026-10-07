@@ -4,7 +4,7 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import id.temankontrol.app.data.mock.*
+import id.temankontrol.app.data.repository.*
 import id.temankontrol.app.data.suggestion.StaticSuggestionCatalog
 import id.temankontrol.app.domain.repository.*
 import javax.inject.Singleton
@@ -16,31 +16,31 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindConsultationRepository(
-        impl: InMemoryConsultationRepository
+        impl: RoomConsultationRepository
     ): ConsultationRepository
 
     @Binds
     @Singleton
     abstract fun bindQuestionRepository(
-        impl: InMemoryQuestionRepository
+        impl: RoomQuestionRepository
     ): QuestionRepository
 
     @Binds
     @Singleton
     abstract fun bindNoteRepository(
-        impl: InMemoryNoteRepository
+        impl: RoomNoteRepository
     ): NoteRepository
 
     @Binds
     @Singleton
     abstract fun bindFollowUpRepository(
-        impl: InMemoryFollowUpRepository
+        impl: RoomFollowUpRepository
     ): FollowUpRepository
 
     @Binds
     @Singleton
     abstract fun bindPreferencesRepository(
-        impl: InMemoryPreferencesRepository
+        impl: RoomPreferencesRepository
     ): PreferencesRepository
 
     @Binds
