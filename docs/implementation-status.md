@@ -10,7 +10,7 @@ Dokumen ini melacak status audit, keputusan, dan implementasi Teman Kontrol berd
 | Phase 1 | Setup Foundation, TS-01, Domain, In-Memory Mock, Design System, Navigasi, dan 9 Layar | PASS | TS-01 lolos, Hilt 2.60, Room 2.6.1 KSP, Navigation Compose + Kotlinx Serialization, seluruh domain model & validasi VR-01..12 dengan unit tests, in-memory mock repositories (D-SAMPLE & scenarios), Material 3 design tokens (#0F7C80), reusable components, dan 9 screen lengkap (SCR-01 s/d SCR-09). Build & test lolos (`BUILD SUCCESSFUL`). |
 | Phase 2 | Local Persistence (Room & DataStore) | PASS | Room Database v1 (`AppDatabase`), Entities lengkap dengan foreign key CASCADE dan unique indices, DAOs, Mappers, DataStore Preferences (`notice_accepted`), Room Repositories aktif via Hilt, export schema v1 (`app/schemas/`), DatabaseSeeder terintegrasi ke `MainActivity` (auto-seed D-SAMPLE) dan `AboutViewModel` (scenario switcher), Unit Test Mappers lolos, Instrumented Test RoomDatabaseTest siap untuk virtual device. Build & test lolos 100% (`BUILD SUCCESSFUL`). |
 | Phase 3 | Fitur Lanjutan & Hardening | PASS | Konfirmasi dialog pembatalan (C-31) & penghapusan cascade (C-30 dengan childCounts), proteksi unsaved changes draft form (C-34 + BackHandler), optimasi TalkBack (NFR-032 via Modifier.toggleable), keyboard padding (NFR-033 via imePadding), audit tema gelap (DEC-008 & NFR-031 nol hardcoded color), banner lewat jadwal (AC-21). Build & test lolos 100% (`BUILD SUCCESSFUL`). |
-| Phase 4 | Verification & Testing | PENDING | UI compose tests, contract tests, emulator tests. |
+| Phase 4 | Verification & Testing | PASS | Audit manifest (DEC-011 & AC-19 tanpa INTERNET, allowBackup=false), perluasan suite unit & ViewModel test (43 test kasus lolos 100%), UI Compose Test `NoticeScreenTest` & `RoomDatabaseTest` pada `src/androidTest/`, lint audit `lintDebug` 0 error (`BUILD SUCCESSFUL`). |
 | Phase 5 | Release Readiness | PENDING | Release build, R8/ProGuard rules, signed bundle. |
 
 ---
@@ -30,7 +30,7 @@ Saat implementasi Phase 2 dimulai, terjadi kegagalan build dengan dua akar penye
      - `@Update` & `@Delete`: mengembalikan `Int` (jumlah baris terpengaruh).
    - Menjaga flag `arg("room.generateKotlin", "true")` aktif pada `app/build.gradle.kts`.
 
-Hasil setelah perbaikan: `assembleDebug` dan `test` **BUILD SUCCESSFUL** tanpa error.
+Hasil setelah perbaikan: `assembleDebug`, `test`, dan `lintDebug` **BUILD SUCCESSFUL** tanpa error.
 
 ---
 
@@ -70,9 +70,6 @@ Hasil setelah perbaikan: `assembleDebug` dan `test` **BUILD SUCCESSFUL** tanpa e
 - Seeder & Data Management:
   - `DatabaseSeeder`: Seeding otomatis D-SAMPLE saat database kosong di `MainActivity`.
   - Integrasi Scenario Switcher di `AboutViewModel` untuk berganti data mock secara langsung pada SQLite Room.
-- Pengujian:
-  - Unit tests: `MappersTest.kt` (100% passing).
-  - Instrumented tests: `RoomDatabaseTest.kt` (CRUD, foreign key CASCADE delete, unique constraint on question normalized text, priority limit queries, note upsert, follow-up status toggle).
 
 ### 4. Hardening & Accessibility Layer (§ 11 & § 14) - 100% COMPLETE
 - **Dialog Pembatalan Status (DEC-010, C-31):** Menampilkan dialog konfirmasi eksplisit sebelum menandai kunjungan sebagai Dibatalkan pada `ConsultationDetailScreen`.
@@ -81,3 +78,23 @@ Hasil setelah perbaikan: `assembleDebug` dan `test` **BUILD SUCCESSFUL** tanpa e
 - **Aksesibilitas TalkBack (NFR-032):** Menggunakan `Modifier.toggleable(role = Role.Checkbox)` pada `ChecklistItem` dengan `Checkbox(onCheckedChange = null)` agar screen reader membaca teks, tanggal, dan status centang sebagai satu kesatuan node aksesibilitas.
 - **Penanganan Insets & Soft Keyboard (NFR-033, NFR-037):** Menambahkan `imePadding()` pada scrollable container form input sehingga tombol Simpan selalu terjangkau saat virtual keyboard muncul.
 - **Audit Tema Gelap (DEC-008, NFR-031, AC-22):** Seluruh kode UI 100% bebas hardcoded color (tidak ada warna hex di luar `Color.kt`), seluruh kontras warna memenuhi rasio minimum 4.5:1.
+
+### 5. Verification & Testing Layer (§ 20 & § 21) - 100% COMPLETE
+- **Unit & ViewModel Test Suite (43 test kasus lulus 100%):**
+  - `ValidationTest.kt`: 16 test cases (VR-01 s/d VR-12).
+  - `MappersTest.kt`: 6 test cases (Entity <-> Domain konversi & past-due logic).
+  - `InMemoryRepositoriesTest.kt`: 6 test cases (skenario mock, batas prioritas, CRUD).
+  - `ConsultationFormViewModelTest.kt`: 5 test cases (validasi inline judul & alasan kosong, proteksi double tap submit, isDirty state, isPastDate logic).
+  - `HistoryViewModelTest.kt`: 4 test cases (filter status Semua, Terjadwal, Selesai, Dibatalkan).
+  - `HomeViewModelTest.kt`: 3 test cases (load kunjungan mendatang, load tindak lanjut terbuka, scenario kosong AC-13, toggle aksi).
+  - `NoticeViewModelTest.kt`: 2 test cases (first launch notice AC-01, persistensi accept notice).
+  - `ExampleUnitTest.kt`: 1 test case.
+- **Instrumented & UI Compose Tests (`src/androidTest/`):**
+  - `RoomDatabaseTest.kt`: Verifikasi CRUD SQLite asli, foreign key CASCADE delete otomatis, unique constraint teks pertanyaan ternormalisasi, priority count queries, note upsert, follow-up status toggle.
+  - `NoticeScreenTest.kt`: Verifikasi render komponen Jetpack Compose dan interaksi tombol persetujuan medis.
+  - APK uji `assembleDebugAndroidTest` terkompilasi 100% siap dijalankan pada Android Virtual Device / Emulator.
+- **Audit Manifest & Keamanan (DEC-011, NFR-014, AC-19):**
+  - `<uses-permission android:name="android.permission.INTERNET" tools:node="remove" />` aktif menjamin nol akses internet.
+  - `android:allowBackup="false"` mencegah kebocoran data medis ke cloud backup.
+- **Audit Kualitas Kode (Lint):**
+  - `.\gradlew.bat lintDebug` selesai dengan **0 error**.

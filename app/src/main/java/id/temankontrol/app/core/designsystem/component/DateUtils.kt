@@ -1,4 +1,4 @@
-﻿package id.temankontrol.app.core.designsystem.component
+package id.temankontrol.app.core.designsystem.component
 
 import java.time.Instant
 import java.time.LocalDate
@@ -8,7 +8,7 @@ import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 object DateUtils {
-    private val localeId = Locale("id", "ID")
+    private val localeId = Locale.forLanguageTag("id-ID")
     private val zoneId = ZoneId.systemDefault()
 
     private val longDateFormatter = DateTimeFormatter.ofPattern("EEEE, d MMM yyyy", localeId)
