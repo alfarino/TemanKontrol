@@ -25,22 +25,32 @@ Aplikasi ini beroperasi **100% Offline (Tanpa Internet)** untuk menjaga kerahasi
 
 ## 3. Lokasi File APK & Cara Instalasi
 
-File APK hasil kompilasi siap pakai telah tersedia pada direktori:
-```text
-app/build/outputs/apk/debug/app-debug.apk
-```
+File APK hasil kompilasi siap pakai telah tersedia pada direktori berikut:
 
-### Metode A: Instalasi di Emulator Android Studio (Virtual Device)
-1. Buka Android Studio dan jalankan Virtual Device (AVD) Anda (misalnya Pixel 5).
-2. Buka Windows Explorer ke folder project: `D:\User\Documents\TemanKontrol\app\build\outputs\apk\debug\`.
-3. Tarik (*drag and drop*) file **`app-debug.apk`** langsung ke atas layar emulator yang menyala.
-4. Tunggu 3–5 detik hingga aplikasi terinstal, lalu ikon **Teman Kontrol** akan muncul di menu aplikasi emulator.
+1. **APK Rilis Resmi (Sangat Direkomendasikan - Ringan & Cepat):**
+   ```text
+   app/build/outputs/apk/release/app-release.apk
+   ```
+   - Ukuran: **~3,3 MB** (dioptimasi dengan R8 code minification & resource shrinking).
+   - Telah ditandatangani (*signed*) sehingga dapat langsung dipasang di HP fisik maupun emulator.
 
-### Metode B: Instalasi di HP Android Fisik
-1. Kirimkan file **`app-debug.apk`** ke smartphone Anda (melalui kabel USB data, WhatsApp, Telegram, atau Google Drive).
-2. Buka file manager di HP, lalu ketuk file `app-debug.apk`.
+2. **APK Debug (Versi Pengembangan):**
+   ```text
+   app/build/outputs/apk/debug/app-debug.apk
+   ```
+   - Ukuran: ~64 MB (berisi simbol debug dan tooling pengembang).
+
+### Metode A: Instalasi di HP Android Fisik (Rekomendasi Utama untuk Klien)
+1. Kirimkan file **`app-release.apk`** ke smartphone Anda (melalui kabel USB data, WhatsApp, Telegram, atau Google Drive).
+2. Buka file manager di HP, lalu ketuk file `app-release.apk`.
 3. Jika muncul dialog keamanan *"Izinkan instalasi dari sumber ini"* (*Allow unknown sources*), pilih **Izinkan** (*Allow*).
 4. Pilih **Instal / Pasang**, kemudian ketuk **Buka**.
+
+### Metode B: Instalasi di Emulator Android Studio (Virtual Device)
+1. Buka Android Studio dan jalankan Virtual Device (AVD) Anda (misalnya Pixel 5 API 30+).
+2. Buka Windows Explorer ke folder project: `D:\User\Documents\TemanKontrol\app\build\outputs\apk\release\`.
+3. Tarik (*drag and drop*) file **`app-release.apk`** langsung ke atas layar emulator yang menyala.
+4. Tunggu beberapa detik hingga aplikasi terinstal, lalu ikon **Teman Kontrol** akan muncul di menu aplikasi emulator.
 
 ---
 

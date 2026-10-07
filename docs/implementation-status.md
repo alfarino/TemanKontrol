@@ -11,7 +11,7 @@ Dokumen ini melacak status audit, keputusan, dan implementasi Teman Kontrol berd
 | Phase 2 | Local Persistence (Room & DataStore) | PASS | Room Database v1 (`AppDatabase`), Entities lengkap dengan foreign key CASCADE dan unique indices, DAOs, Mappers, DataStore Preferences (`notice_accepted`), Room Repositories aktif via Hilt, export schema v1 (`app/schemas/`), DatabaseSeeder terintegrasi ke `MainActivity` (auto-seed D-SAMPLE) dan `AboutViewModel` (scenario switcher), Unit Test Mappers lolos, Instrumented Test RoomDatabaseTest siap untuk virtual device. Build & test lolos 100% (`BUILD SUCCESSFUL`). |
 | Phase 3 | Fitur Lanjutan & Hardening | PASS | Konfirmasi dialog pembatalan (C-31) & penghapusan cascade (C-30 dengan childCounts), proteksi unsaved changes draft form (C-34 + BackHandler), optimasi TalkBack (NFR-032 via Modifier.toggleable), keyboard padding (NFR-033 via imePadding), audit tema gelap (DEC-008 & NFR-031 nol hardcoded color), banner lewat jadwal (AC-21). Build & test lolos 100% (`BUILD SUCCESSFUL`). |
 | Phase 4 | Verification & Testing | PASS | Audit manifest (DEC-011 & AC-19 tanpa INTERNET, allowBackup=false), perluasan suite unit & ViewModel test (43 test kasus lolos 100%), UI Compose Test `NoticeScreenTest` & `RoomDatabaseTest` pada `src/androidTest/`, lint audit `lintDebug` 0 error (`BUILD SUCCESSFUL`). |
-| Phase 5 | Release Readiness | PENDING | Release build, R8/ProGuard rules, signed bundle. |
+| Phase 5 | Release Readiness | PASS | Konfigurasi ProGuard/R8 rules lengkap (`app/proguard-rules.pro`), R8 code minification & resource shrinking aktif, compile art profile, APK rilis `assembleRelease` berhasil di-generate dengan ukuran super ramping 3,3 MB (NFR-028 budget ≤ 10 MB terpenuhi). Siap distribusi ke klien. |
 
 ---
 
@@ -30,7 +30,7 @@ Saat implementasi Phase 2 dimulai, terjadi kegagalan build dengan dua akar penye
      - `@Update` & `@Delete`: mengembalikan `Int` (jumlah baris terpengaruh).
    - Menjaga flag `arg("room.generateKotlin", "true")` aktif pada `app/build.gradle.kts`.
 
-Hasil setelah perbaikan: `assembleDebug`, `test`, dan `lintDebug` **BUILD SUCCESSFUL** tanpa error.
+Hasil setelah perbaikan: `assembleDebug`, `test`, `lintDebug`, dan `assembleRelease` **BUILD SUCCESSFUL** tanpa error.
 
 ---
 
@@ -98,3 +98,11 @@ Hasil setelah perbaikan: `assembleDebug`, `test`, dan `lintDebug` **BUILD SUCCES
   - `android:allowBackup="false"` mencegah kebocoran data medis ke cloud backup.
 - **Audit Kualitas Kode (Lint):**
   - `.\gradlew.bat lintDebug` selesai dengan **0 error**.
+
+### 6. Release Readiness Layer (§ 11 & § 22) - 100% COMPLETE
+- **ProGuard / R8 Rules (`app/proguard-rules.pro`):** Konfigurasi aturan preservasi Kotlinx Serialization, Room Database, SQLite DAOs, Hilt entry points, dan Navigation Compose.
+- **R8 Minifikasi & Resource Shrinking:** Mengeliminasi kode dan asset yang tidak terpakai, menghasilkan performa eksekusi dan efisiensi memori maksimal.
+- **Kompilasi Binary Rilis (`assembleRelease`):**
+  - File: `app/build/outputs/apk/release/app-release.apk`
+  - Ukuran: **3,31 MB** (memenuhi batas NFR-028 ≤ 10 MB dengan margin 67%).
+  - Ditandatangani dan siap dipasang langsung pada perangkat Android fisik (HP) maupun emulator.
