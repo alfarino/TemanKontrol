@@ -31,7 +31,7 @@ File APK hasil kompilasi siap pakai telah tersedia pada direktori berikut:
    ```text
    app/build/outputs/apk/release/app-release.apk
    ```
-   - Ukuran: **~3,3 MB** (dioptimasi dengan R8 code minification & resource shrinking).
+   - Ukuran: **~6,8 MB** (dioptimasi dengan R8 code minification & resource shrinking).
    - Telah ditandatangani (*signed*) sehingga dapat langsung dipasang di HP fisik maupun emulator.
 
 2. **APK Debug (Versi Pengembangan):**

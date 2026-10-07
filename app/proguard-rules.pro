@@ -1,11 +1,38 @@
 # ProGuard / R8 Rules for Teman Kontrol
 
-# Keep Kotlinx Serialization routes for Compose Navigation
--keepattributes *Annotation*, InnerClasses
+# ===================================================================
+# General & Attributes
+# ===================================================================
+-keepattributes *Annotation*, InnerClasses, EnclosingMethod, Signature, SourceFile, LineNumberTable
+
+# ===================================================================
+# Room Database, DAOs, Entities, and Generated Implementations
+# ===================================================================
+-keep class * extends androidx.room.RoomDatabase {
+    <init>();
+    *;
+}
+-keep class *_Impl {
+    <init>();
+    <init>(...);
+    *;
+}
+-keep class id.temankontrol.app.data.local.** { *; }
+-keep interface id.temankontrol.app.data.local.** { *; }
+-keep @androidx.room.Entity class * { *; }
+-keep @androidx.room.Dao interface * { *; }
+-dontwarn androidx.room.paging.**
+
+# ===================================================================
+# Kotlinx Serialization & Navigation Compose Routes
+# ===================================================================
 -dontnote kotlinx.serialization.SerializationKt
 
 -keepclassmembers class * {
     @kotlinx.serialization.Serializable <fields>;
+}
+-keepclassmembers class * {
+    @kotlinx.serialization.SerialName <fields>;
 }
 -keepclassmembers class * {
     static ** Companion;
@@ -16,18 +43,40 @@
 -keepclasseswithmembers class * {
     kotlinx.serialization.KSerializer serializer(...);
 }
+-keepclassmembers class * implements kotlinx.serialization.KSerializer {
+    <init>(...);
+}
+-keep class * implements kotlinx.serialization.KSerializer {
+    <init>(...);
+    *;
+}
 -keep class id.temankontrol.app.navigation.** { *; }
 -keep interface id.temankontrol.app.navigation.** { *; }
+-keep class id.temankontrol.app.domain.model.** { *; }
 
-# Room Database & Entities
--keep class * extends androidx.room.RoomDatabase
--dontwarn androidx.room.paging.**
--keep class id.temankontrol.app.data.local.entity.** { *; }
--keep class id.temankontrol.app.data.local.dao.** { *; }
-
-# Hilt & Dependency Injection
+# ===================================================================
+# Hilt / Dagger Dependency Injection
+# ===================================================================
 -dontwarn com.google.errorprone.annotations.**
--keep class * extends dagger.hilt.android.lifecycle.HiltViewModel
+-keep class * extends dagger.hilt.android.lifecycle.HiltViewModel { *; }
+-keep class * extends androidx.lifecycle.ViewModel { *; }
+-keep class * extends androidx.lifecycle.AndroidViewModel { *; }
+-keep class **_HiltModules* { *; }
+-keep class **_Factory { *; }
+-keep class **_MembersInjector { *; }
+-keep @dagger.hilt.android.AndroidEntryPoint class * { *; }
+-keep @dagger.hilt.android.lifecycle.HiltViewModel class * { *; }
+-keep @dagger.Module class * { *; }
+-keep class id.temankontrol.app.di.** { *; }
 
-# Coroutines
+# ===================================================================
+# Coroutines & DataStore
+# ===================================================================
 -dontwarn kotlinx.coroutines.**
+-keep class androidx.datastore.** { *; }
+
+# ===================================================================
+# Jetpack Compose Runtime
+# ===================================================================
+-keep class androidx.compose.runtime.** { *; }
+-keep class androidx.compose.ui.** { *; }

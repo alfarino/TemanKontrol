@@ -11,7 +11,7 @@ Dokumen ini melacak status audit, keputusan, dan implementasi Teman Kontrol berd
 | Phase 2 | Local Persistence (Room & DataStore) | PASS | Room Database v1 (`AppDatabase`), Entities lengkap dengan foreign key CASCADE dan unique indices, DAOs, Mappers, DataStore Preferences (`notice_accepted`), Room Repositories aktif via Hilt, export schema v1 (`app/schemas/`), DatabaseSeeder terintegrasi ke `MainActivity` (auto-seed D-SAMPLE) dan `AboutViewModel` (scenario switcher), Unit Test Mappers lolos, Instrumented Test RoomDatabaseTest siap untuk virtual device. Build & test lolos 100% (`BUILD SUCCESSFUL`). |
 | Phase 3 | Fitur Lanjutan & Hardening | PASS | Konfirmasi dialog pembatalan (C-31) & penghapusan cascade (C-30 dengan childCounts), proteksi unsaved changes draft form (C-34 + BackHandler), optimasi TalkBack (NFR-032 via Modifier.toggleable), keyboard padding (NFR-033 via imePadding), audit tema gelap (DEC-008 & NFR-031 nol hardcoded color), banner lewat jadwal (AC-21). Build & test lolos 100% (`BUILD SUCCESSFUL`). |
 | Phase 4 | Verification & Testing | PASS | Audit manifest (DEC-011 & AC-19 tanpa INTERNET, allowBackup=false), perluasan suite unit & ViewModel test (43 test kasus lolos 100%), UI Compose Test `NoticeScreenTest` & `RoomDatabaseTest` pada `src/androidTest/`, lint audit `lintDebug` 0 error (`BUILD SUCCESSFUL`). |
-| Phase 5 | Release Readiness | PASS | Konfigurasi ProGuard/R8 rules lengkap (`app/proguard-rules.pro`), R8 code minification & resource shrinking aktif, compile art profile, APK rilis `assembleRelease` berhasil di-generate dengan ukuran super ramping 3,3 MB (NFR-028 budget ≤ 10 MB terpenuhi). Siap distribusi ke klien. |
+| Phase 5 | Release Readiness | PASS | Konfigurasi ProGuard/R8 rules lengkap (`app/proguard-rules.pro`), R8 code minification & resource shrinking aktif, compile art profile, APK rilis `assembleRelease` berhasil di-generate dengan ukuran super ramping 6,8 MB (NFR-028 budget ≤ 10 MB terpenuhi). Siap distribusi ke klien. |
 
 ---
 
@@ -104,5 +104,5 @@ Hasil setelah perbaikan: `assembleDebug`, `test`, `lintDebug`, dan `assembleRele
 - **R8 Minifikasi & Resource Shrinking:** Mengeliminasi kode dan asset yang tidak terpakai, menghasilkan performa eksekusi dan efisiensi memori maksimal.
 - **Kompilasi Binary Rilis (`assembleRelease`):**
   - File: `app/build/outputs/apk/release/app-release.apk`
-  - Ukuran: **3,31 MB** (memenuhi batas NFR-028 ≤ 10 MB dengan margin 67%).
+  - Ukuran: **6,81 MB** (memenuhi batas NFR-028 ≤ 10 MB dengan margin 32%).
   - Ditandatangani dan siap dipasang langsung pada perangkat Android fisik (HP) maupun emulator.
