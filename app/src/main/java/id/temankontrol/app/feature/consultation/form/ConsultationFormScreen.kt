@@ -1,4 +1,4 @@
-﻿package id.temankontrol.app.feature.consultation.form
+package id.temankontrol.app.feature.consultation.form
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -107,6 +107,7 @@ fun ConsultationFormContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
+                    .imePadding()
                     .padding(16.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)

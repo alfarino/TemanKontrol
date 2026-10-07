@@ -1,4 +1,4 @@
-﻿package id.temankontrol.app.feature.consultation.detail
+package id.temankontrol.app.feature.consultation.detail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -33,7 +33,22 @@ fun ConsultationDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var showMenu by remember { mutableStateOf(false) }
+    var showCancelDialog by remember { mutableStateOf(false) }
+
+    if (showCancelDialog) {
+        ConfirmDialog(
+            title = stringResource(R.string.dialog_cancel_consultation_title),
+            message = stringResource(R.string.dialog_cancel_consultation_body),
+            confirmButtonText = stringResource(R.string.action_mark_cancelled),
+            dismissButtonText = stringResource(R.string.action_back),
+            isDestructive = false,
+            onConfirm = {
+                showCancelDialog = false
+                viewModel.setStatus(ConsultationStatus.CANCELLED)
+            },
+            onDismiss = { showCancelDialog = false }
+        )
+    }
 
     if (showDeleteDialog) {
         val bodyText = stringResource(
@@ -62,7 +77,13 @@ fun ConsultationDetailScreen(
         onManageQuestionsClick = { onNavigateToQuestions(viewModel.consultationIdString) },
         onManageNotesClick = { onNavigateToNotes(viewModel.consultationIdString) },
         onManageFollowUpsClick = { onNavigateToFollowUps(viewModel.consultationIdString) },
-        onSetStatus = viewModel::setStatus,
+        onSetStatus = { status ->
+            if (status == ConsultationStatus.CANCELLED) {
+                showCancelDialog = true
+            } else {
+                viewModel.setStatus(status)
+            }
+        },
         onToggleQuestion = viewModel::toggleQuestionDiscussed,
         onToggleFollowUp = viewModel::toggleFollowUpCompleted
     )
@@ -163,11 +184,11 @@ fun ConsultationDetailContent(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
-                        .padding(horizontal = 16.dp)
+                        .padding(16.dp)
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Header Card
+                    // Header Info Kunjungan
                     Card(
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(
@@ -254,9 +275,9 @@ fun ConsultationDetailContent(
                         }
                     }
 
-                    // Section 1: Persiapan (Daftar Pertanyaan)
+                    // Section 1: Daftar Pertanyaan
                     SectionCard(
-                        title = "1. Persiapan: Pertanyaan",
+                        title = "1. Daftar Pertanyaan",
                         action = {
                             TextButton(onClick = onManageQuestionsClick) {
                                 Text("Kelola")

@@ -1,12 +1,13 @@
-﻿package id.temankontrol.app.core.designsystem.component
+package id.temankontrol.app.core.designsystem.component
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -33,12 +34,16 @@ fun ChecklistItem(
         modifier = modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 48.dp)
-            .clickable { onCheckedChange(!checked) }
+            .toggleable(
+                value = checked,
+                role = Role.Checkbox,
+                onValueChange = onCheckedChange
+            )
             .padding(vertical = 4.dp, horizontal = 4.dp)
     ) {
         Checkbox(
             checked = checked,
-            onCheckedChange = onCheckedChange,
+            onCheckedChange = null, // Handled by parent toggleable Row for accessible TalkBack node merging (NFR-032)
             colors = CheckboxDefaults.colors(
                 checkedColor = MaterialTheme.colorScheme.primary
             )

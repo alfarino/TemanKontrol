@@ -1,4 +1,4 @@
-﻿package id.temankontrol.app.feature.note
+package id.temankontrol.app.feature.note
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
@@ -110,6 +110,7 @@ fun NoteContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
+                    .imePadding()
                     .padding(16.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)

@@ -9,7 +9,7 @@ Dokumen ini melacak status audit, keputusan, dan implementasi Teman Kontrol berd
 | Phase 0 | Audit arsitektur & resolver blocker | PASS | JBR Android Studio 25 diarahkan, git diinisialisasi, lint/test baseline hijau. Relokasi project ke `D:\User\Documents\TemanKontrol` berhasil. |
 | Phase 1 | Setup Foundation, TS-01, Domain, In-Memory Mock, Design System, Navigasi, dan 9 Layar | PASS | TS-01 lolos, Hilt 2.60, Room 2.6.1 KSP, Navigation Compose + Kotlinx Serialization, seluruh domain model & validasi VR-01..12 dengan unit tests, in-memory mock repositories (D-SAMPLE & scenarios), Material 3 design tokens (#0F7C80), reusable components, dan 9 screen lengkap (SCR-01 s/d SCR-09). Build & test lolos (`BUILD SUCCESSFUL`). |
 | Phase 2 | Local Persistence (Room & DataStore) | PASS | Room Database v1 (`AppDatabase`), Entities lengkap dengan foreign key CASCADE dan unique indices, DAOs, Mappers, DataStore Preferences (`notice_accepted`), Room Repositories aktif via Hilt, export schema v1 (`app/schemas/`), DatabaseSeeder terintegrasi ke `MainActivity` (auto-seed D-SAMPLE) dan `AboutViewModel` (scenario switcher), Unit Test Mappers lolos, Instrumented Test RoomDatabaseTest siap untuk virtual device. Build & test lolos 100% (`BUILD SUCCESSFUL`). |
-| Phase 3 | Fitur Lanjutan & Hardening | PENDING | Form drafts, cascade delete integration, talkback, edge cases, dark mode audit. |
+| Phase 3 | Fitur Lanjutan & Hardening | PASS | Konfirmasi dialog pembatalan (C-31) & penghapusan cascade (C-30 dengan childCounts), proteksi unsaved changes draft form (C-34 + BackHandler), optimasi TalkBack (NFR-032 via Modifier.toggleable), keyboard padding (NFR-033 via imePadding), audit tema gelap (DEC-008 & NFR-031 nol hardcoded color), banner lewat jadwal (AC-21). Build & test lolos 100% (`BUILD SUCCESSFUL`). |
 | Phase 4 | Verification & Testing | PENDING | UI compose tests, contract tests, emulator tests. |
 | Phase 5 | Release Readiness | PENDING | Release build, R8/ProGuard rules, signed bundle. |
 
@@ -73,3 +73,11 @@ Hasil setelah perbaikan: `assembleDebug` dan `test` **BUILD SUCCESSFUL** tanpa e
 - Pengujian:
   - Unit tests: `MappersTest.kt` (100% passing).
   - Instrumented tests: `RoomDatabaseTest.kt` (CRUD, foreign key CASCADE delete, unique constraint on question normalized text, priority limit queries, note upsert, follow-up status toggle).
+
+### 4. Hardening & Accessibility Layer (§ 11 & § 14) - 100% COMPLETE
+- **Dialog Pembatalan Status (DEC-010, C-31):** Menampilkan dialog konfirmasi eksplisit sebelum menandai kunjungan sebagai Dibatalkan pada `ConsultationDetailScreen`.
+- **Dialog Penghapusan Cascade (C-30):** Menghitung relasi child secara dinamis (`childCounts`) dan menampilkan jumlah pertanyaan, catatan, serta tindak lanjut yang akan ikut terhapus.
+- **Proteksi Unsaved Changes Draft (C-34, NFR-038):** Menangkap back gesture (`BackHandler`) pada `ConsultationFormScreen` dan `NoteScreen` untuk menampilkan dialog konfirmasi buang perubahan.
+- **Aksesibilitas TalkBack (NFR-032):** Menggunakan `Modifier.toggleable(role = Role.Checkbox)` pada `ChecklistItem` dengan `Checkbox(onCheckedChange = null)` agar screen reader membaca teks, tanggal, dan status centang sebagai satu kesatuan node aksesibilitas.
+- **Penanganan Insets & Soft Keyboard (NFR-033, NFR-037):** Menambahkan `imePadding()` pada scrollable container form input sehingga tombol Simpan selalu terjangkau saat virtual keyboard muncul.
+- **Audit Tema Gelap (DEC-008, NFR-031, AC-22):** Seluruh kode UI 100% bebas hardcoded color (tidak ada warna hex di luar `Color.kt`), seluruh kontras warna memenuhi rasio minimum 4.5:1.
