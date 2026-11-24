@@ -45,4 +45,7 @@ interface FollowUpDao {
 
     @Query("DELETE FROM follow_up_actions WHERE id = :id")
     suspend fun delete(id: String): Int
+
+    @Query("SELECT * FROM follow_up_actions")
+    suspend fun getAll(): List<FollowUpActionEntity>
 }

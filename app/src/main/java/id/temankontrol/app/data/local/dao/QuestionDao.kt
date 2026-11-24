@@ -32,6 +32,12 @@ interface QuestionDao {
     @Query("UPDATE questions SET is_discussed = :discussed, updated_at = :updatedAt WHERE id = :id")
     suspend fun setDiscussed(id: String, discussed: Boolean, updatedAt: Long): Int
 
+    @Query("UPDATE questions SET answer = :answer, answer_updated_at = :answerUpdatedAt, updated_at = :updatedAt WHERE id = :id")
+    suspend fun updateAnswer(id: String, answer: String?, answerUpdatedAt: Long?, updatedAt: Long): Int
+
     @Query("DELETE FROM questions WHERE id = :id")
     suspend fun delete(id: String): Int
+
+    @Query("SELECT * FROM questions")
+    suspend fun getAll(): List<QuestionEntity>
 }

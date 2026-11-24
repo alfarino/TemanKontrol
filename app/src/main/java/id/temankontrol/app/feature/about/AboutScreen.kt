@@ -1,12 +1,15 @@
-﻿package id.temankontrol.app.feature.about
+package id.temankontrol.app.feature.about
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,6 +30,9 @@ import id.temankontrol.app.data.mock.MockScenario
 @Composable
 fun AboutScreen(
     onNavigateToNotice: () -> Unit,
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateToBackup: () -> Unit = {},
+    onNavigateToReminders: () -> Unit = {},
     viewModel: AboutViewModel = hiltViewModel()
 ) {
     val activeScenario by viewModel.currentScenario.collectAsStateWithLifecycle()
@@ -34,6 +40,9 @@ fun AboutScreen(
     AboutContent(
         activeScenario = activeScenario,
         onNavigateToNotice = onNavigateToNotice,
+        onNavigateToSettings = onNavigateToSettings,
+        onNavigateToBackup = onNavigateToBackup,
+        onNavigateToReminders = onNavigateToReminders,
         onSelectScenario = viewModel::selectScenario
     )
 }
@@ -42,6 +51,9 @@ fun AboutScreen(
 fun AboutContent(
     activeScenario: MockScenario,
     onNavigateToNotice: () -> Unit,
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateToBackup: () -> Unit = {},
+    onNavigateToReminders: () -> Unit = {},
     onSelectScenario: (MockScenario) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -93,6 +105,38 @@ fun AboutContent(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            }
+
+            // Pengaturan, Cadangan & Pengingat
+            SectionCard(
+                title = "Cadangan, Pengingat & Keamanan"
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = onNavigateToBackup,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Backup, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Cadangan & Pemulihan (.tkbackup)")
+                    }
+                    OutlinedButton(
+                        onClick = onNavigateToReminders,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Notifications, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Pengingat & Notifikasi Lokal")
+                    }
+                    OutlinedButton(
+                        onClick = onNavigateToSettings,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Pengaturan & Kunci Aplikasi")
+                    }
                 }
             }
 

@@ -17,6 +17,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.temankontrol.app.R
 import id.temankontrol.app.core.designsystem.component.*
+import id.temankontrol.app.domain.model.Attachment
 
 @Composable
 fun NoteScreen(
@@ -63,10 +64,15 @@ fun NoteScreen(
 
     NoteContent(
         uiState = uiState,
+        consultationId = viewModel.consultationIdString,
         onNavigateBack = handleBack,
         onSummaryChange = viewModel::onSummaryChange,
         onProviderInstructionChange = viewModel::onProviderInstructionChange,
         onAdditionalNotesChange = viewModel::onAdditionalNotesChange,
+        onAddPhoto = viewModel::addPhotoAttachment,
+        onAddVoiceNote = viewModel::addVoiceAttachment,
+        onDeleteAttachment = viewModel::deleteAttachment,
+        onUpdateAttachmentCaption = viewModel::updateAttachmentCaption,
         onSaveClick = { viewModel.saveNote(onSuccess = onNavigateBack) },
         onDeleteClick = { showDeleteDialog = true }
     )
@@ -75,10 +81,15 @@ fun NoteScreen(
 @Composable
 fun NoteContent(
     uiState: NoteUiState,
+    consultationId: String = "default",
     onNavigateBack: () -> Unit,
     onSummaryChange: (String) -> Unit,
     onProviderInstructionChange: (String) -> Unit,
     onAdditionalNotesChange: (String) -> Unit,
+    onAddPhoto: (String?, String?) -> Unit,
+    onAddVoiceNote: (Long, String?, String?) -> Unit,
+    onDeleteAttachment: (Attachment) -> Unit,
+    onUpdateAttachmentCaption: (String, String?) -> Unit,
     onSaveClick: () -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -158,6 +169,22 @@ fun NoteContent(
                     minLines = 3,
                     errorMessage = uiState.additionalNotesError
                 )
+
+                // Lampiran Penjelasan Tambahan dari Tenaga Medis (Foto & VN)
+                SectionCard(
+                    title = "Lampiran Penjelasan Tambahan (Foto & VN)"
+                ) {
+                    AttachmentSection(
+                        attachments = uiState.attachments,
+                        consultationId = consultationId,
+                        compact = true,
+                        emptyHint = "Tambahkan foto dokumen/gambar atau rekaman suara penjelasan tambahan dari tenaga medis.",
+                        onAddPhoto = onAddPhoto,
+                        onAddVoiceNote = onAddVoiceNote,
+                        onDeleteAttachment = onDeleteAttachment,
+                        onUpdateCaption = onUpdateAttachmentCaption
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
 

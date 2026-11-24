@@ -10,6 +10,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import id.temankontrol.app.data.local.AppDatabase
+import id.temankontrol.app.data.local.Migrations
 import id.temankontrol.app.data.local.dao.*
 import id.temankontrol.app.data.preferences.userPreferencesDataStore
 import javax.inject.Singleton
@@ -27,7 +28,9 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "teman_kontrol.db"
-        ).build()
+        )
+            .addMigrations(Migrations.MIGRATION_1_2, Migrations.MIGRATION_2_3)
+            .build()
     }
 
     @Provides
@@ -41,6 +44,12 @@ object DatabaseModule {
 
     @Provides
     fun provideFollowUpDao(database: AppDatabase): FollowUpDao = database.followUpDao()
+
+    @Provides
+    fun provideReminderLogDao(database: AppDatabase): ReminderLogDao = database.reminderLogDao()
+
+    @Provides
+    fun provideAttachmentDao(database: AppDatabase): AttachmentDao = database.attachmentDao()
 
     @Provides
     @Singleton

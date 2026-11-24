@@ -10,9 +10,11 @@ import id.temankontrol.app.data.local.entity.*
         ConsultationEntity::class,
         QuestionEntity::class,
         ConsultationNoteEntity::class,
-        FollowUpActionEntity::class
+        FollowUpActionEntity::class,
+        ReminderLogEntity::class,
+        AttachmentEntity::class
     ],
-    version = 1,
+    version = 3,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -20,4 +22,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun questionDao(): QuestionDao
     abstract fun noteDao(): NoteDao
     abstract fun followUpDao(): FollowUpDao
+    abstract fun reminderLogDao(): ReminderLogDao
+    abstract fun attachmentDao(): AttachmentDao
 }

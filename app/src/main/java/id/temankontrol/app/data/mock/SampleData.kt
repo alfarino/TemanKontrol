@@ -1,5 +1,8 @@
-﻿package id.temankontrol.app.data.mock
+package id.temankontrol.app.data.mock
 
+import id.temankontrol.app.domain.model.Attachment
+import id.temankontrol.app.domain.model.AttachmentKind
+import id.temankontrol.app.domain.model.AttachmentTarget
 import id.temankontrol.app.domain.model.Consultation
 import id.temankontrol.app.domain.model.ConsultationId
 import id.temankontrol.app.domain.model.ConsultationNote
@@ -11,8 +14,8 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 object SampleData {
-    val baseTime: Instant = Instant.parse("2026-10-07T08:00:00Z")
-    val baseDate: LocalDate = LocalDate.of(2026, 10, 7)
+    val baseTime: Instant get() = Instant.now().truncatedTo(ChronoUnit.HOURS)
+    val baseDate: LocalDate get() = LocalDate.now()
 
     fun getSampleConsultations(): List<Consultation> = listOf(
         Consultation(
@@ -141,11 +144,13 @@ object SampleData {
         Question(
             id = "q-401",
             consultationId = ConsultationId("c-004"),
-            text = "Apakah nyeri dada hilang timbul masih dalam batas wajar?",
+            text = "Bagaimana cara membedakan nyeri dada yang masih wajar dan yang harus segera diperiksa?",
             isPriority = true,
             isDiscussed = true,
             createdAt = baseTime.minus(15, ChronoUnit.DAYS),
-            updatedAt = baseTime.minus(10, ChronoUnit.DAYS)
+            updatedAt = baseTime.minus(10, ChronoUnit.DAYS),
+            answer = "Nyeri ringan sebentar saat berubah posisi masih wajar, namun bila terasa menekan > 10 menit atau menjalar ke lengan/rahang harus segera ke IGD.",
+            answerUpdatedAt = baseTime.minus(10, ChronoUnit.DAYS)
         ),
         Question(
             id = "q-402",
@@ -251,6 +256,59 @@ object SampleData {
             completedAt = null,
             createdAt = baseTime.minus(10, ChronoUnit.DAYS),
             updatedAt = baseTime.minus(10, ChronoUnit.DAYS)
+        )
+    )
+
+    fun getSampleAttachments(): List<Attachment> = listOf(
+        Attachment(
+            id = "att-101",
+            consultationId = ConsultationId("c-001"),
+            questionId = "q-101",
+            target = AttachmentTarget.QUESTION,
+            kind = AttachmentKind.PHOTO,
+            fileName = "hasil_tensi_mingguan.jpg",
+            mimeType = "image/jpeg",
+            sizeBytes = 285_400L,
+            caption = "Catatan tensi pagi 7 hari terakhir",
+            createdAt = baseTime.minus(1, ChronoUnit.DAYS)
+        ),
+        Attachment(
+            id = "att-401",
+            consultationId = ConsultationId("c-004"),
+            questionId = "q-401",
+            target = AttachmentTarget.QUESTION,
+            kind = AttachmentKind.VOICE,
+            fileName = "penjelasan_nyeri_dada.m4a",
+            mimeType = "audio/mp4",
+            sizeBytes = 320_000L,
+            durationMs = 82_000L,
+            caption = "Penjelasan dokter tentang tanda bahaya",
+            createdAt = baseTime.minus(10, ChronoUnit.DAYS)
+        ),
+        Attachment(
+            id = "att-402",
+            consultationId = ConsultationId("c-004"),
+            questionId = null,
+            target = AttachmentTarget.ADDITIONAL_NOTE,
+            kind = AttachmentKind.PHOTO,
+            fileName = "hasil_ekg_oktober.jpg",
+            mimeType = "image/jpeg",
+            sizeBytes = 412_800L,
+            caption = "Foto lembaran hasil EKG kontrol",
+            createdAt = baseTime.minus(10, ChronoUnit.DAYS)
+        ),
+        Attachment(
+            id = "att-403",
+            consultationId = ConsultationId("c-004"),
+            questionId = null,
+            target = AttachmentTarget.ADDITIONAL_NOTE,
+            kind = AttachmentKind.VOICE,
+            fileName = "arahan_olahraga_tambahan.m4a",
+            mimeType = "audio/mp4",
+            sizeBytes = 195_000L,
+            durationMs = 48_000L,
+            caption = "Arahan tambahan jadwal jalan pagi",
+            createdAt = baseTime.minus(10, ChronoUnit.DAYS)
         )
     )
 }

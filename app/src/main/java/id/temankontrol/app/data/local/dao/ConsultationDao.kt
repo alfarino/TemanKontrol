@@ -76,4 +76,7 @@ interface ConsultationDao {
 
     @Query("SELECT COUNT(*) FROM consultations")
     suspend fun countAll(): Int
+
+    @Query("SELECT * FROM consultations")
+    suspend fun getAll(): List<ConsultationEntity>
 }

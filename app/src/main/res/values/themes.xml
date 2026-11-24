@@ -2,4 +2,10 @@
 <resources>
 
     <style name="Theme.TemanKontrol" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="Theme.TemanKontrol.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#0F7C80</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_round</item>
+        <item name="postSplashScreenTheme">@style/Theme.TemanKontrol</item>
+    </style>
 </resources>

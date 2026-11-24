@@ -18,4 +18,7 @@ interface NoteDao {
 
     @Query("DELETE FROM consultation_notes WHERE consultation_id = :consultationId")
     suspend fun delete(consultationId: String): Int
+
+    @Query("SELECT * FROM consultation_notes")
+    suspend fun getAll(): List<ConsultationNoteEntity>
 }

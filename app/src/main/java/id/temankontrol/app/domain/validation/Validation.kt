@@ -1,4 +1,4 @@
-﻿package id.temankontrol.app.domain.validation
+package id.temankontrol.app.domain.validation
 
 import id.temankontrol.app.core.common.AppError
 import id.temankontrol.app.core.common.AppResult
@@ -14,9 +14,22 @@ object Validation {
     const val MAX_CONSULTATION_REASON_LENGTH = 500
     const val MAX_OPTIONAL_FIELD_LENGTH = 100
     const val MAX_QUESTION_LENGTH = 250
-    const val MAX_PRIORITY_QUESTIONS = 3
+    const val MAX_ANSWER_LENGTH = 1000
+    const val MAX_CAPTION_LENGTH = 100
+    const val MIN_BACKUP_PASSWORD_LENGTH = 8
     const val MAX_NOTE_FIELD_LENGTH = 2000
     const val MAX_FOLLOW_UP_ACTION_LENGTH = 250
+
+    private val CLOSED_QUESTION_STARTERS = setOf(
+        "apakah",
+        "bolehkah",
+        "bisakah",
+        "haruskah",
+        "perlukah",
+        "benarkah",
+        "sudahkah",
+        "adakah"
+    )
 
     fun normalizeSingleLine(text: String): String =
         text.trim().replace("\\s+".toRegex(), " ")
@@ -97,13 +110,58 @@ object Validation {
         }
     }
 
-    // VR-07: Batas 3 prioritas
+    // VR-07: Prioritas tidak lagi dibatasi maksimal 3 (sesuai revisi masukan pengguna)
+    @Suppress("UNUSED_PARAMETER")
     fun validatePriorityLimit(currentPriorityCount: Int, addingPriority: Boolean): AppResult<Unit> {
-        return if (addingPriority && currentPriorityCount >= MAX_PRIORITY_QUESTIONS) {
-            AppResult.Failure(AppError.PriorityLimitExceeded)
+        return AppResult.Success(Unit)
+    }
+
+    // VR-13: Jawaban yang dicatat pengguna (opsional, maks 1.000 karakter)
+    fun validateAnswerText(answer: String?): AppResult<String?> {
+        if (answer.isNullOrBlank()) return AppResult.Success(null)
+        val normalized = normalizeMultiline(answer)
+        return if (normalized.length > MAX_ANSWER_LENGTH) {
+            AppResult.Failure(AppError.Validation("answer", "Jawaban maksimal $MAX_ANSWER_LENGTH karakter."))
         } else {
-            AppResult.Success(Unit)
+            AppResult.Success(normalized)
         }
+    }
+
+    // VR-14: Keterangan lampiran (opsional, maks 100 karakter)
+    fun validateCaptionText(caption: String?): AppResult<String?> {
+        if (caption.isNullOrBlank()) return AppResult.Success(null)
+        val normalized = normalizeSingleLine(caption)
+        return if (normalized.length > MAX_CAPTION_LENGTH) {
+            AppResult.Failure(AppError.Validation("caption", "Keterangan maksimal $MAX_CAPTION_LENGTH karakter."))
+        } else {
+            AppResult.Success(normalized)
+        }
+    }
+
+    // VR-17: Kata sandi cadangan
+    fun validateBackupPassword(password: String, confirm: String): AppResult<Unit> {
+        if (password.length < MIN_BACKUP_PASSWORD_LENGTH) {
+            return AppResult.Failure(
+                AppError.Validation("password", "Kata sandi minimal $MIN_BACKUP_PASSWORD_LENGTH karakter.")
+            )
+        }
+        if (password != confirm) {
+            return AppResult.Failure(
+                AppError.Validation("confirmPassword", "Konfirmasi kata sandi tidak cocok.")
+            )
+        }
+        return AppResult.Success(Unit)
+    }
+
+    // VR-18: Deteksi pertanyaan tertutup (petunjuk lembut, tidak memblokir)
+    fun isLikelyClosedQuestion(text: String): Boolean {
+        val trimmed = text.trim().lowercase()
+        if (trimmed.isEmpty()) return false
+        val firstWord = trimmed.split(Regex("\\s+|[,?.!]"), limit = 2).firstOrNull().orEmpty()
+        if (firstWord in CLOSED_QUESTION_STARTERS) return true
+        return trimmed.endsWith("ya/tidak?") ||
+            trimmed.endsWith("ya atau tidak?") ||
+            trimmed.endsWith(", ya?")
     }
 
     // VR-08: Duplikat pertanyaan

@@ -1,6 +1,13 @@
 package id.temankontrol.app.feature.consultation.form
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -31,8 +38,13 @@ fun ConsultationFormScreen(
     viewModel: ConsultationFormViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     var showUnsavedDialog by remember { mutableStateOf(false) }
+
+    val notifLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ -> }
 
     val handleBack = {
         if (uiState.isDirty) {
@@ -66,7 +78,15 @@ fun ConsultationFormScreen(
         onTimeChange = viewModel::onTimeChange,
         onSubmit = {
             viewModel.submit(
-                onSuccess = onSuccess,
+                onSuccess = { newId ->
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+                        PackageManager.PERMISSION_GRANTED
+                    ) {
+                        notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                    onSuccess(newId)
+                },
                 onError = { /* show in snackbar */ }
             )
         }

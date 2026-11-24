@@ -6,8 +6,11 @@ import id.temankontrol.app.core.common.AppResult
 import id.temankontrol.app.data.local.dao.ConsultationDao
 import id.temankontrol.app.data.local.entity.ConsultationEntity
 import id.temankontrol.app.data.local.mapper.toDomain
+import id.temankontrol.app.data.media.MediaAttachmentManager
+import id.temankontrol.app.data.reminder.ReminderScheduler
 import id.temankontrol.app.domain.model.*
 import id.temankontrol.app.domain.repository.ConsultationRepository
+import id.temankontrol.app.domain.repository.PreferencesRepository
 import id.temankontrol.app.domain.validation.Validation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -20,7 +23,10 @@ import javax.inject.Singleton
 
 @Singleton
 class RoomConsultationRepository @Inject constructor(
-    private val consultationDao: ConsultationDao
+    private val consultationDao: ConsultationDao,
+    private val mediaManager: MediaAttachmentManager,
+    private val reminderScheduler: ReminderScheduler,
+    private val preferencesRepository: PreferencesRepository
 ) : ConsultationRepository {
 
     private fun getStartOfTodayMillis(): Long {
@@ -76,6 +82,8 @@ class RoomConsultationRepository @Inject constructor(
 
         return try {
             consultationDao.insert(entity)
+            preferencesRepository.markDataChanged()
+            reminderScheduler.rescheduleAll()
             AppResult.Success(newId)
         } catch (e: SQLiteConstraintException) {
             AppResult.Failure(AppError.Duplicate)
@@ -103,6 +111,8 @@ class RoomConsultationRepository @Inject constructor(
 
         return try {
             consultationDao.update(updated)
+            preferencesRepository.markDataChanged()
+            reminderScheduler.rescheduleAll()
             AppResult.Success(Unit)
         } catch (e: SQLiteConstraintException) {
             AppResult.Failure(AppError.Duplicate)
@@ -115,6 +125,8 @@ class RoomConsultationRepository @Inject constructor(
         return try {
             val rows = consultationDao.setStatus(id.value, status.name, Instant.now().toEpochMilli())
             if (rows > 0) {
+                preferencesRepository.markDataChanged()
+                reminderScheduler.rescheduleAll()
                 AppResult.Success(Unit)
             } else {
                 AppResult.Failure(AppError.NotFound)
@@ -128,6 +140,9 @@ class RoomConsultationRepository @Inject constructor(
         return try {
             val rows = consultationDao.delete(id.value)
             if (rows > 0) {
+                mediaManager.deleteConsultationFolder(id.value)
+                preferencesRepository.markDataChanged()
+                reminderScheduler.rescheduleAll()
                 AppResult.Success(Unit)
             } else {
                 AppResult.Failure(AppError.NotFound)

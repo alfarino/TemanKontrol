@@ -1,4 +1,4 @@
-﻿package id.temankontrol.app.navigation
+package id.temankontrol.app.navigation
 
 import kotlinx.serialization.Serializable
 
@@ -15,6 +15,15 @@ object HistoryRoute
 object AboutRoute
 
 @Serializable
+object SettingsRoute
+
+@Serializable
+object BackupRoute
+
+@Serializable
+object ReminderSettingsRoute
+
+@Serializable
 data class ConsultationDetailRoute(val id: String)
 
 @Serializable
@@ -28,3 +37,9 @@ data class NoteRoute(val consultationId: String)
 
 @Serializable
 data class FollowUpRoute(val consultationId: String)
+
+@Serializable
+data class ConsultationModeRoute(val consultationId: String)
+
+@Serializable
+data class SummaryPreviewRoute(val consultationId: String)

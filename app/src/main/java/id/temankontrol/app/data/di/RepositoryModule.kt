@@ -1,9 +1,10 @@
-﻿package id.temankontrol.app.data.di
+package id.temankontrol.app.data.di
 
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import id.temankontrol.app.data.backup.AndroidBackupRepository
 import id.temankontrol.app.data.repository.*
 import id.temankontrol.app.data.suggestion.StaticSuggestionCatalog
 import id.temankontrol.app.domain.repository.*
@@ -48,4 +49,16 @@ abstract class RepositoryModule {
     abstract fun bindSuggestionCatalog(
         impl: StaticSuggestionCatalog
     ): SuggestionCatalog
+
+    @Binds
+    @Singleton
+    abstract fun bindAttachmentRepository(
+        impl: RoomAttachmentRepository
+    ): AttachmentRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBackupRepository(
+        impl: AndroidBackupRepository
+    ): BackupRepository
 }

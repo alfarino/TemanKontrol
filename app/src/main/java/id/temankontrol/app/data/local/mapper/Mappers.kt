@@ -42,7 +42,26 @@ fun QuestionEntity.toDomain(): Question {
         isPriority = isPriority,
         isDiscussed = isDiscussed,
         createdAt = Instant.ofEpochMilli(createdAt),
-        updatedAt = Instant.ofEpochMilli(updatedAt)
+        updatedAt = Instant.ofEpochMilli(updatedAt),
+        answer = answer,
+        answerUpdatedAt = answerUpdatedAt?.let { Instant.ofEpochMilli(it) }
+    )
+}
+
+fun AttachmentEntity.toDomain(): Attachment {
+    return Attachment(
+        id = id,
+        consultationId = ConsultationId(consultationId),
+        questionId = questionId,
+        target = runCatching { AttachmentTarget.valueOf(target) }.getOrDefault(AttachmentTarget.ADDITIONAL_NOTE),
+        kind = AttachmentKind.valueOf(kind),
+        fileName = fileName,
+        mimeType = mimeType,
+        sizeBytes = sizeBytes,
+        durationMs = durationMs,
+        caption = caption,
+        uriString = uriString,
+        createdAt = Instant.ofEpochMilli(createdAt)
     )
 }
 

@@ -1,6 +1,5 @@
 package id.temankontrol.app.feature.consultation.detail
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,29 +10,37 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.temankontrol.app.R
 import id.temankontrol.app.core.designsystem.component.*
+import id.temankontrol.app.domain.model.AttachmentKind
 import id.temankontrol.app.domain.model.ConsultationStatus
 import id.temankontrol.app.domain.validation.Validation
+import kotlinx.coroutines.launch
 
 @Composable
 fun ConsultationDetailScreen(
     onNavigateBack: () -> Unit,
     onNavigateToEdit: (String) -> Unit,
+    onNavigateToCreateConsultation: () -> Unit,
     onNavigateToQuestions: (String) -> Unit,
     onNavigateToNotes: (String) -> Unit,
     onNavigateToFollowUps: (String) -> Unit,
+    onNavigateToConsultationMode: (String) -> Unit,
+    onNavigateToSummary: (String) -> Unit,
     viewModel: ConsultationDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showCancelDialog by remember { mutableStateOf(false) }
+    var showCarryOverDialog by remember { mutableStateOf(false) }
 
     if (showCancelDialog) {
         ConfirmDialog(
@@ -69,19 +76,46 @@ fun ConsultationDetailScreen(
         )
     }
 
+    if (showCarryOverDialog && uiState.unansweredQuestions.isNotEmpty()) {
+        CarryOverQuestionsDialog(
+            unansweredQuestions = uiState.unansweredQuestions,
+            scheduledTargets = uiState.otherScheduledConsultations,
+            onCopyToConsultation = { targetId, selectedIds ->
+                showCarryOverDialog = false
+                viewModel.copyQuestionsToConsultation(targetId, selectedIds) { msg ->
+                    scope.launch { snackbarHostState.showSnackbar(msg) }
+                }
+            },
+            onCreateNewConsultation = {
+                showCarryOverDialog = false
+                onNavigateToCreateConsultation()
+            },
+            onDismiss = { showCarryOverDialog = false }
+        )
+    }
+
     ConsultationDetailContent(
         uiState = uiState,
+        snackbarHostState = snackbarHostState,
         onNavigateBack = onNavigateBack,
         onEditClick = { onNavigateToEdit(viewModel.consultationIdString) },
         onDeleteClick = { showDeleteDialog = true },
         onManageQuestionsClick = { onNavigateToQuestions(viewModel.consultationIdString) },
         onManageNotesClick = { onNavigateToNotes(viewModel.consultationIdString) },
         onManageFollowUpsClick = { onNavigateToFollowUps(viewModel.consultationIdString) },
+        onStartConsultationMode = { onNavigateToConsultationMode(viewModel.consultationIdString) },
+        onOpenSummary = { onNavigateToSummary(viewModel.consultationIdString) },
+        onOpenCarryOver = { showCarryOverDialog = true },
         onSetStatus = { status ->
-            if (status == ConsultationStatus.CANCELLED) {
-                showCancelDialog = true
-            } else {
-                viewModel.setStatus(status)
+            when (status) {
+                ConsultationStatus.CANCELLED -> showCancelDialog = true
+                ConsultationStatus.COMPLETED -> {
+                    viewModel.setStatus(status)
+                    if (uiState.unansweredQuestions.isNotEmpty()) {
+                        showCarryOverDialog = true
+                    }
+                }
+                else -> viewModel.setStatus(status)
             }
         },
         onToggleQuestion = viewModel::toggleQuestionDiscussed,
@@ -92,12 +126,16 @@ fun ConsultationDetailScreen(
 @Composable
 fun ConsultationDetailContent(
     uiState: ConsultationDetailUiState,
+    snackbarHostState: SnackbarHostState,
     onNavigateBack: () -> Unit,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onManageQuestionsClick: () -> Unit,
     onManageNotesClick: () -> Unit,
     onManageFollowUpsClick: () -> Unit,
+    onStartConsultationMode: () -> Unit,
+    onOpenSummary: () -> Unit,
+    onOpenCarryOver: () -> Unit,
     onSetStatus: (ConsultationStatus) -> Unit,
     onToggleQuestion: (String, Boolean) -> Unit,
     onToggleFollowUp: (String, Boolean) -> Unit,
@@ -112,6 +150,9 @@ fun ConsultationDetailContent(
                 onNavigateBack = onNavigateBack,
                 actions = {
                     if (uiState.consultation != null) {
+                        IconButton(onClick = onOpenSummary) {
+                            Icon(Icons.Default.Share, contentDescription = "Ringkasan & Bagikan")
+                        }
                         IconButton(onClick = onEditClick) {
                             Icon(Icons.Default.Edit, contentDescription = "Ubah")
                         }
@@ -123,6 +164,25 @@ fun ConsultationDetailContent(
                                 expanded = showMenu,
                                 onDismissRequest = { showMenu = false }
                             ) {
+                                DropdownMenuItem(
+                                    text = { Text("Ringkasan & Bagikan") },
+                                    leadingIcon = { Icon(Icons.Default.Description, contentDescription = null) },
+                                    onClick = {
+                                        showMenu = false
+                                        onOpenSummary()
+                                    }
+                                )
+                                if (uiState.unansweredQuestions.isNotEmpty()) {
+                                    DropdownMenuItem(
+                                        text = { Text("Bawa Pertanyaan ke Kunjungan Lain") },
+                                        leadingIcon = { Icon(Icons.Default.Forward, contentDescription = null) },
+                                        onClick = {
+                                            showMenu = false
+                                            onOpenCarryOver()
+                                        }
+                                    )
+                                }
+                                HorizontalDivider()
                                 if (uiState.consultation.status != ConsultationStatus.COMPLETED) {
                                     DropdownMenuItem(
                                         text = { Text("Tandai Selesai") },
@@ -164,6 +224,7 @@ fun ConsultationDetailContent(
                 }
             )
         },
+        snackbarHostState = snackbarHostState,
         modifier = modifier
     ) { padding ->
         when {
@@ -194,7 +255,7 @@ fun ConsultationDetailContent(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                         ),
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Row(
@@ -275,7 +336,25 @@ fun ConsultationDetailContent(
                         }
                     }
 
-                    // Section 1: Daftar Pertanyaan
+                    // Mode Konsultasi CTA (F-15)
+                    if (uiState.questions.isNotEmpty()) {
+                        Button(
+                            onClick = onStartConsultationMode,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                        ) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Mulai Mode Konsultasi (${uiState.questions.size} Pertanyaan)",
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    // Section 1: Daftar Pertanyaan (dengan Jawaban & Lampiran per pertanyaan)
                     SectionCard(
                         title = "1. Daftar Pertanyaan",
                         action = {
@@ -291,31 +370,51 @@ fun ConsultationDetailContent(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         } else {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                uiState.questions.take(3).forEach { q ->
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Checkbox(
-                                            checked = q.isDiscussed,
-                                            onCheckedChange = { onToggleQuestion(q.id, it) }
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = q.text,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        if (q.isPriority) {
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            PriorityBadge()
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                uiState.questions.take(4).forEach { q ->
+                                    val qAttachments = uiState.attachmentsByQuestion[q.id].orEmpty()
+                                    val photoCount = qAttachments.count { it.kind == AttachmentKind.PHOTO }
+                                    val voiceCount = qAttachments.count { it.kind == AttachmentKind.VOICE }
+
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Checkbox(
+                                                checked = q.isDiscussed,
+                                                onCheckedChange = { onToggleQuestion(q.id, it) }
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = q.text,
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                                if (q.isPriority || photoCount > 0 || voiceCount > 0) {
+                                                    Spacer(modifier = Modifier.height(4.dp))
+                                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                        if (q.isPriority) PriorityBadge()
+                                                        CompactAttachmentBadges(photoCount, voiceCount)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (!q.answer.isNullOrBlank()) {
+                                            Text(
+                                                text = "Jawaban dicatat: ${q.answer}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.padding(start = 48.dp, top = 2.dp)
+                                            )
                                         }
                                     }
                                 }
-                                if (uiState.questions.size > 3) {
+                                if (uiState.questions.size > 4) {
                                     Text(
-                                        text = "+${uiState.questions.size - 3} pertanyaan lainnya",
+                                        text = "+${uiState.questions.size - 4} pertanyaan lainnya",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.padding(start = 8.dp, top = 4.dp)
@@ -325,17 +424,18 @@ fun ConsultationDetailContent(
                         }
                     }
 
-                    // Section 2: Catatan Hasil Konsultasi
+                    // Section 2: Catatan Hasil Konsultasi (+ Lampiran Penjelasan Tambahan)
                     SectionCard(
                         title = "2. Hasil Konsultasi",
                         action = {
                             TextButton(onClick = onManageNotesClick) {
-                                Text(if (uiState.note != null) "Ubah" else "Tulis")
+                                Text(if (uiState.note != null || uiState.additionalNoteAttachments.isNotEmpty()) "Ubah" else "Tulis")
                             }
                         }
                     ) {
                         val note = uiState.note
-                        if (note == null || !note.isNotEmpty()) {
+                        val extraAttachments = uiState.additionalNoteAttachments
+                        if ((note == null || !note.isNotEmpty()) && extraAttachments.isEmpty()) {
                             Text(
                                 text = stringResource(R.string.empty_notes_title),
                                 style = MaterialTheme.typography.bodyMedium,
@@ -343,7 +443,7 @@ fun ConsultationDetailContent(
                             )
                         } else {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                if (!note.summary.isNullOrBlank()) {
+                                if (note != null && !note.summary.isNullOrBlank()) {
                                     Text(
                                         text = "Ringkasan:",
                                         style = MaterialTheme.typography.labelMedium,
@@ -354,7 +454,7 @@ fun ConsultationDetailContent(
                                         style = MaterialTheme.typography.bodyMedium
                                     )
                                 }
-                                if (!note.providerInstruction.isNullOrBlank()) {
+                                if (note != null && !note.providerInstruction.isNullOrBlank()) {
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = "Arahan Tenaga Kesehatan:",
@@ -366,7 +466,7 @@ fun ConsultationDetailContent(
                                         style = MaterialTheme.typography.bodyMedium
                                     )
                                 }
-                                if (!note.additionalNotes.isNullOrBlank()) {
+                                if (note != null && !note.additionalNotes.isNullOrBlank()) {
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = "Catatan Tambahan:",
@@ -376,6 +476,18 @@ fun ConsultationDetailContent(
                                     Text(
                                         text = note.additionalNotes,
                                         style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                                if (extraAttachments.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Lampiran Penjelasan Tambahan:",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    CompactAttachmentBadges(
+                                        photoCount = extraAttachments.count { it.kind == AttachmentKind.PHOTO },
+                                        voiceCount = extraAttachments.count { it.kind == AttachmentKind.VOICE }
                                     )
                                 }
                             }

@@ -45,5 +45,11 @@ data class QuestionEntity(
     val createdAt: Long,
 
     @ColumnInfo(name = "updated_at")
-    val updatedAt: Long
+    val updatedAt: Long,
+
+    @ColumnInfo(name = "answer")
+    val answer: String? = null,
+
+    @ColumnInfo(name = "answer_updated_at")
+    val answerUpdatedAt: Long? = null
 )

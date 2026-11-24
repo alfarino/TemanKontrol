@@ -1,4 +1,4 @@
-﻿package id.temankontrol.app.data.mock
+package id.temankontrol.app.data.mock
 
 import id.temankontrol.app.core.common.AppError
 import id.temankontrol.app.domain.model.ConsultationId
@@ -33,22 +33,18 @@ class InMemoryRepositoriesTest {
     }
 
     @Test
-    fun testPriorityLimitExceeded() = runBlocking {
+    fun testUnlimitedPriorityQuestionsAllowed() = runBlocking {
         val consultId = ConsultationId("c-test-p")
-        // Create 3 priority questions
+        // Create 4 priority questions (no longer capped at 3)
         val q1 = questionRepo.create(consultId, QuestionInput("Pertanyaan 1", isPriority = true))
         assertTrue(q1.isSuccess())
         val q2 = questionRepo.create(consultId, QuestionInput("Pertanyaan 2", isPriority = true))
         assertTrue(q2.isSuccess())
         val q3 = questionRepo.create(consultId, QuestionInput("Pertanyaan 3", isPriority = true))
         assertTrue(q3.isSuccess())
-
-        // 4th priority question must fail
         val q4 = questionRepo.create(consultId, QuestionInput("Pertanyaan 4", isPriority = true))
-        assertTrue(q4.isFailure())
-        assertEquals(AppError.PriorityLimitExceeded, (q4 as id.temankontrol.app.core.common.AppResult.Failure).error)
+        assertTrue(q4.isSuccess())
 
-        // 4th non-priority question must succeed
         val q5 = questionRepo.create(consultId, QuestionInput("Pertanyaan 5", isPriority = false))
         assertTrue(q5.isSuccess())
     }

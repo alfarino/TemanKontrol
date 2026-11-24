@@ -1,6 +1,20 @@
 # Teman Kontrol Implementation Status
 
-Dokumen ini melacak status audit, keputusan, dan implementasi Teman Kontrol berdasarkan PRD v1.0.
+Dokumen ini melacak status audit, keputusan, dan implementasi Teman Kontrol berdasarkan **PRD Final ([PRD.md](PRD.md) v2.0)**.
+
+> **Terakhir diperbarui:** 17 Nov 2026 (Seluruh fase hingga **Phase 10 Rilis Produksi v2.0.0** selesai dan terverifikasi).
+> **Ringkasan:** Seluruh scope **PRD v2.0 Final** (F-01 s/d F-17, SCR-01 s/d SCR-17, Room v1→v2→v3, DataStore persisten, `.tkbackup` AES-256-GCM, `AlarmManager` notifikasi lokal privat, media foto/VN, `BiometricPrompt`, PDF generator, dan release signing keystore) telah selesai dan lulus pengujian.
+
+### Hasil verifikasi akhir (17 Nov 2026)
+
+| Pemeriksaan | Hasil |
+|---|---|
+| `.\gradlew.bat test` | `BUILD SUCCESSFUL`, **63 unit test (14 suite), 0 gagal** |
+| `.\gradlew.bat connectedDebugAndroidTest` | `BUILD SUCCESSFUL` di `Pixel_5` (AVD API 37): **10/10 instrumented test lolos** (`MigrationTest` v1→v3, `RoomDatabaseTest` 7 kasus, `NoticeScreenTest`, `ExampleInstrumentedTest`) |
+| `.\gradlew.bat lintDebug` & `lintVitalRelease` | `BUILD SUCCESSFUL`, **0 error** |
+| APK release (`app-release.apk` v2.0.0) | 8.664.444 byte (**8,26 MiB**) — NFR-028/NFR-047 (≤ 10 MB) terpenuhi; ditandatangani dengan keystore rilis di luar repo (`keystore.properties` di-gitignore) |
+| Merged manifest release | Tanpa `INTERNET` (`tools:node="remove"`), `allowBackup="false"`, `FileProvider` & `ReminderReceiver` `exported="false"` |
+| Repo Git | Branch `main` terhubung ke `github.com/alfarino/TemanKontrol` (perubahan v2.0 siap di-commit/push sesuai permintaan) |
 
 ## Riwayat fase
 
@@ -10,8 +24,16 @@ Dokumen ini melacak status audit, keputusan, dan implementasi Teman Kontrol berd
 | Phase 1 | Setup Foundation, TS-01, Domain, In-Memory Mock, Design System, Navigasi, dan 9 Layar | PASS | TS-01 lolos, Hilt 2.60, Room 2.6.1 KSP, Navigation Compose + Kotlinx Serialization, seluruh domain model & validasi VR-01..12 dengan unit tests, in-memory mock repositories (D-SAMPLE & scenarios), Material 3 design tokens (#0F7C80), reusable components, dan 9 screen lengkap (SCR-01 s/d SCR-09). Build & test lolos (`BUILD SUCCESSFUL`). |
 | Phase 2 | Local Persistence (Room & DataStore) | PASS | Room Database v1 (`AppDatabase`), Entities lengkap dengan foreign key CASCADE dan unique indices, DAOs, Mappers, DataStore Preferences (`notice_accepted`), Room Repositories aktif via Hilt, export schema v1 (`app/schemas/`), DatabaseSeeder terintegrasi ke `MainActivity` (auto-seed D-SAMPLE) dan `AboutViewModel` (scenario switcher), Unit Test Mappers lolos, Instrumented Test RoomDatabaseTest siap untuk virtual device. Build & test lolos 100% (`BUILD SUCCESSFUL`). |
 | Phase 3 | Fitur Lanjutan & Hardening | PASS | Konfirmasi dialog pembatalan (C-31) & penghapusan cascade (C-30 dengan childCounts), proteksi unsaved changes draft form (C-34 + BackHandler), optimasi TalkBack (NFR-032 via Modifier.toggleable), keyboard padding (NFR-033 via imePadding), audit tema gelap (DEC-008 & NFR-031 nol hardcoded color), banner lewat jadwal (AC-21). Build & test lolos 100% (`BUILD SUCCESSFUL`). |
-| Phase 4 | Verification & Testing | PASS | Audit manifest (DEC-011 & AC-19 tanpa INTERNET, allowBackup=false), perluasan suite unit & ViewModel test (43 test kasus lolos 100%), UI Compose Test `NoticeScreenTest` & `RoomDatabaseTest` pada `src/androidTest/`, lint audit `lintDebug` 0 error (`BUILD SUCCESSFUL`). |
-| Phase 5 | Release Readiness | PASS | Konfigurasi ProGuard/R8 rules lengkap (`app/proguard-rules.pro`), R8 code minification & resource shrinking aktif, compile art profile, APK rilis `assembleRelease` berhasil di-generate dengan ukuran super ramping 6,8 MB (NFR-028 budget ≤ 10 MB terpenuhi). Siap distribusi ke klien. |
+| Phase 4 | Verification & Testing | PASS | Audit manifest (DEC-011 & AC-19 tanpa INTERNET, allowBackup=false), perluasan suite unit & ViewModel test (40 test kasus lolos 100%; koreksi dari catatan awal "43"), UI Compose Test `NoticeScreenTest` & `RoomDatabaseTest` pada `src/androidTest/`, lint audit `lintDebug` 0 error (`BUILD SUCCESSFUL`). |
+| Phase 5 | Release Readiness | PASS | Konfigurasi ProGuard/R8 rules lengkap (`app/proguard-rules.pro`), R8 code minification & resource shrinking aktif, compile art profile, APK rilis `assembleRelease` berhasil di-generate dengan ukuran super ramping 6,8 MB (NFR-028 budget ≤ 10 MB terpenuhi). Siap didemokan ke klien (lihat catatan: APK masih bertanda tangan kunci debug). |
+| Phase 6 | Finalisasi PRD v1.0 (`StrictMode`, `AppLogger`, `core-splashscreen`, D-100 seeder) | PASS | `StrictMode`, `AppLogger`, `core-splashscreen`, dan `DatabaseSeeder.seedLargeD100()` selesai; catatan: UAT 5 peserta manusia & pengukuran di Redmi Note 10S fisik menunggu sesi pengguna akhir. |
+| Phase 7 | Tampilan Revisi v2.0 & Penyatuan PRD Final | PASS | [PRD.md](PRD.md) v2.0 Final, tanpa batas 3 prioritas (`DEC-030`), 20 saran pertanyaan terbuka, chip & petunjuk ya/tidak, jawaban dicatat, lampiran Foto & VN per pertanyaan + Catatan Tambahan (`DEC-031`), `SCR-10` s/d `SCR-17`. |
+| Phase 8A | Fondasi & Migrasi Room v1 → v2 → v3 + DataStore Persisten | PASS | `AppDatabase` v3 (`questions.answer`, `reminder_log`, `attachments`), `MIGRATION_1_2` & `MIGRATION_2_3` + `3.json`, `RoomAttachmentRepository`, `PreferencesRepository` DataStore lengkap. |
+| Phase 8B | Engine Cadangan `.tkbackup` & Kunci Aplikasi | PASS | `BackupCrypto` (PBKDF2 600.000 iterasi + AES-256-GCM + SHA-256), `AndroidBackupRepository` (ZIP SAF & restore atomik), `BiometricPrompt` + `FLAG_SECURE` di `MainActivity`. |
+| Phase 8C | Engine Media (Foto & VN) & Ekspor PDF | PASS | `MediaAttachmentManager` (`ImageDecoder` ≤ 1.600 px + hapus EXIF, `MediaRecorder`/`MediaPlayer` + auto-stop background + orphan cleanup), `FileProvider`, `SummaryPdfGenerator` A4. |
+| Phase 8D | Engine Pengingat Lokal (`AlarmManager`) | PASS | `ReminderPlanner`, `ReminderScheduler`, `ReminderReceiver`, `BootRescheduleReceiver`, 3 notification channel, `VISIBILITY_PRIVATE`, deep-link & izin kontekstual `POST_NOTIFICATIONS`. |
+| Phase 9 | Verifikasi End-to-End & Uji Perangkat (`Pixel_5` AVD) | PASS | 63 unit test + 10/10 instrumented test di AVD (termasuk `MigrationTest` v1→v3 & `NoticeScreenTest` dengan Espresso 3.7.0), `lintDebug` 0 error, audit manifest. |
+| Phase 10 | Rilis Produksi v2.0.0 | PASS | Keystore rilis di luar repo (`keystore.properties` di-gitignore), `versionCode = 2`, `versionName = "2.0.0"`, R8 + shrink resources, `app-release.apk` **8,26 MiB** (< 10 MB). |
 
 ---
 
@@ -80,10 +102,10 @@ Hasil setelah perbaikan: `assembleDebug`, `test`, `lintDebug`, dan `assembleRele
 - **Audit Tema Gelap (DEC-008, NFR-031, AC-22):** Seluruh kode UI 100% bebas hardcoded color (tidak ada warna hex di luar `Color.kt`), seluruh kontras warna memenuhi rasio minimum 4.5:1.
 
 ### 5. Verification & Testing Layer (§ 20 & § 21) - 100% COMPLETE
-- **Unit & ViewModel Test Suite (43 test kasus lulus 100%):**
+- **Unit & ViewModel Test Suite (40 test kasus lulus 100%, diverifikasi dari laporan Gradle 17 Nov 2026):**
   - `ValidationTest.kt`: 16 test cases (VR-01 s/d VR-12).
   - `MappersTest.kt`: 6 test cases (Entity <-> Domain konversi & past-due logic).
-  - `InMemoryRepositoriesTest.kt`: 6 test cases (skenario mock, batas prioritas, CRUD).
+  - `InMemoryRepositoriesTest.kt`: 3 test cases (skenario mock, batas prioritas, CRUD).
   - `ConsultationFormViewModelTest.kt`: 5 test cases (validasi inline judul & alasan kosong, proteksi double tap submit, isDirty state, isPastDate logic).
   - `HistoryViewModelTest.kt`: 4 test cases (filter status Semua, Terjadwal, Selesai, Dibatalkan).
   - `HomeViewModelTest.kt`: 3 test cases (load kunjungan mendatang, load tindak lanjut terbuka, scenario kosong AC-13, toggle aksi).
@@ -105,4 +127,17 @@ Hasil setelah perbaikan: `assembleDebug`, `test`, `lintDebug`, dan `assembleRele
 - **Kompilasi Binary Rilis (`assembleRelease`):**
   - File: `app/build/outputs/apk/release/app-release.apk`
   - Ukuran: **6,81 MB** (memenuhi batas NFR-028 ≤ 10 MB dengan margin 32%).
-  - Ditandatangani dan siap dipasang langsung pada perangkat Android fisik (HP) maupun emulator.
+  - Dapat dipasang pada perangkat Android fisik maupun emulator. **Catatan:** `signingConfig` rilis saat ini masih memakai kunci **debug** (`signingConfigs.getByName("debug")`), sehingga APK ini layak untuk demo/UAT tetapi **belum layak untuk distribusi publik** (PRD §22 mewajibkan keystore rilis di luar repo).
+
+---
+
+## Status Celah PRD v1.0 & Item Lapangan (Pembaruan 17 Nov 2026)
+
+Celah teknis **G-03, G-04, G-05, G-07, G-09, dan G-10** telah ditutup pada Phase 8A–10. Item yang tersisa hanya pengujian lapangan oleh pengguna akhir / perangkat fisik spesifik:
+
+| # | Item | Rujukan PRD | Status | Keterangan |
+|---|---|---|---|---|
+| G-01 | UAT 5 peserta | §6.2 | Menunggu sesi klien | Siap diuji menggunakan `app-release.apk` v2.0.0 |
+| G-02 | Pengukuran performa di Redmi Note 10S fisik | NFR-001, 025–027 | Menunggu perangkat fisik | `Pixel_5` AVD telah lulus seluruh `connectedDebugAndroidTest` |
+| G-06 | `material-icons-extended` | DEC-014 (diperbarui v2.0) | Selesai (Amended) | Diizinkan di PRD v2.0; APK rilis dengan R8 tetap 8,26 MiB (< 10 MB) |
+| G-08 | Baseline Profile (`:baselineprofile`) | NFR-030 | Opsional | Dapat ditambahkan bila dibutuhkan |

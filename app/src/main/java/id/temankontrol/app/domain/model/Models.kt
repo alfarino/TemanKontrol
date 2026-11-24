@@ -1,4 +1,4 @@
-﻿package id.temankontrol.app.domain.model
+package id.temankontrol.app.domain.model
 
 import java.time.Instant
 import java.time.LocalDate
@@ -23,7 +23,24 @@ enum class SuggestionCategory {
     SYMPTOM,
     EXAM,
     TREATMENT,
-    NEXT_STEP
+    NEXT_STEP,
+    UNDERSTANDING
+}
+
+enum class AttachmentKind {
+    PHOTO,
+    VOICE
+}
+
+enum class AttachmentTarget {
+    QUESTION,
+    ADDITIONAL_NOTE
+}
+
+enum class AppLockTimeout(val label: String, val minutes: Int) {
+    IMMEDIATE("Langsung", 0),
+    ONE_MINUTE("1 menit", 1),
+    FIVE_MINUTES("5 menit", 5)
 }
 
 data class Consultation(
@@ -57,7 +74,9 @@ data class Question(
     val isPriority: Boolean,
     val isDiscussed: Boolean,
     val createdAt: Instant,
-    val updatedAt: Instant
+    val updatedAt: Instant,
+    val answer: String? = null,
+    val answerUpdatedAt: Instant? = null
 )
 
 data class ConsultationNote(
@@ -110,7 +129,52 @@ data class ConsultationInput(
 
 data class QuestionInput(
     val text: String,
-    val isPriority: Boolean = false
+    val isPriority: Boolean = false,
+    val answer: String? = null
+)
+
+data class Attachment(
+    val id: String,
+    val consultationId: ConsultationId,
+    val questionId: String? = null,
+    val target: AttachmentTarget = AttachmentTarget.ADDITIONAL_NOTE,
+    val kind: AttachmentKind,
+    val fileName: String,
+    val mimeType: String,
+    val sizeBytes: Long,
+    val durationMs: Long? = null,
+    val caption: String? = null,
+    val uriString: String? = null,
+    val createdAt: Instant
+)
+
+data class ReminderSettings(
+    val visitReminderEnabled: Boolean = true,
+    val visitReminderHour: Int = 19,
+    val prepareReminderEnabled: Boolean = true,
+    val followUpReminderEnabled: Boolean = true,
+    val followUpReminderHour: Int = 8,
+    val backupReminderEnabled: Boolean = true,
+    val showTitleOnLockScreen: Boolean = false,
+    val hasNotificationPermission: Boolean = true
+)
+
+data class AppLockSettings(
+    val enabled: Boolean = false,
+    val timeout: AppLockTimeout = AppLockTimeout.ONE_MINUTE,
+    val secureScreen: Boolean = true,
+    val hasDeviceCredential: Boolean = true
+)
+
+data class BackupSummaryInfo(
+    val lastBackupAt: Instant? = null,
+    val hasUnsavedChangesSinceBackup: Boolean = true,
+    val consultationCount: Int = 0,
+    val questionCount: Int = 0,
+    val noteCount: Int = 0,
+    val followUpCount: Int = 0,
+    val attachmentCount: Int = 0,
+    val estimatedSizeBytes: Long = 0L
 )
 
 data class NoteInput(

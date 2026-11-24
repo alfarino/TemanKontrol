@@ -1,9 +1,10 @@
-﻿package id.temankontrol.app.feature.consultation.detail
+package id.temankontrol.app.feature.consultation.detail
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import id.temankontrol.app.core.common.AppResult
 import id.temankontrol.app.domain.model.*
 import id.temankontrol.app.domain.repository.*
 import kotlinx.coroutines.flow.*
@@ -15,10 +16,22 @@ data class ConsultationDetailUiState(
     val questions: List<Question> = emptyList(),
     val note: ConsultationNote? = null,
     val followUps: List<FollowUpAction> = emptyList(),
+    val attachments: List<Attachment> = emptyList(),
+    val otherScheduledConsultations: List<ConsultationSummary> = emptyList(),
     val childCounts: ChildCounts = ChildCounts(0, false, 0),
     val isLoading: Boolean = true,
     val isNotFound: Boolean = false
-)
+) {
+    val attachmentsByQuestion: Map<String, List<Attachment>>
+        get() = attachments.filter { it.target == AttachmentTarget.QUESTION && it.questionId != null }
+            .groupBy { it.questionId!! }
+
+    val additionalNoteAttachments: List<Attachment>
+        get() = attachments.filter { it.target == AttachmentTarget.ADDITIONAL_NOTE }
+
+    val unansweredQuestions: List<Question>
+        get() = questions.filter { !it.isDiscussed }
+}
 
 @HiltViewModel
 class ConsultationDetailViewModel @Inject constructor(
@@ -26,6 +39,7 @@ class ConsultationDetailViewModel @Inject constructor(
     private val questionRepository: QuestionRepository,
     private val noteRepository: NoteRepository,
     private val followUpRepository: FollowUpRepository,
+    private val attachmentRepository: AttachmentRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -36,8 +50,23 @@ class ConsultationDetailViewModel @Inject constructor(
         consultationRepository.observe(consultationId),
         questionRepository.observeByConsultation(consultationId),
         noteRepository.observe(consultationId),
-        followUpRepository.observeByConsultation(consultationId)
-    ) { consultation, questions, note, followUps ->
+        followUpRepository.observeByConsultation(consultationId),
+        attachmentRepository.observeByConsultation(consultationId),
+        consultationRepository.observeHistory(StatusFilter.SCHEDULED)
+    ) { values ->
+        @Suppress("UNCHECKED_CAST")
+        val consultation = values[0] as Consultation?
+        @Suppress("UNCHECKED_CAST")
+        val questions = values[1] as List<Question>
+        @Suppress("UNCHECKED_CAST")
+        val note = values[2] as ConsultationNote?
+        @Suppress("UNCHECKED_CAST")
+        val followUps = values[3] as List<FollowUpAction>
+        @Suppress("UNCHECKED_CAST")
+        val attachments = values[4] as List<Attachment>
+        @Suppress("UNCHECKED_CAST")
+        val scheduled = values[5] as List<ConsultationSummary>
+
         if (consultation == null) {
             ConsultationDetailUiState(isLoading = false, isNotFound = true)
         } else {
@@ -46,6 +75,8 @@ class ConsultationDetailViewModel @Inject constructor(
                 questions = questions,
                 note = note,
                 followUps = followUps,
+                attachments = attachments,
+                otherScheduledConsultations = scheduled.filter { it.id != consultationId },
                 childCounts = ChildCounts(questions.size, note != null, followUps.size),
                 isLoading = false,
                 isNotFound = false
@@ -72,6 +103,39 @@ class ConsultationDetailViewModel @Inject constructor(
     fun toggleFollowUpCompleted(actionId: String, completed: Boolean) {
         viewModelScope.launch {
             followUpRepository.setCompleted(actionId, completed)
+        }
+    }
+
+    fun copyQuestionsToConsultation(
+        targetConsultationId: String,
+        questionIds: Set<String>,
+        onResult: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            when (val res = questionRepository.copyUnansweredQuestions(
+                fromConsultationId = consultationId,
+                toConsultationId = ConsultationId(targetConsultationId),
+                questionIds = questionIds
+            )) {
+                is AppResult.Success -> {
+                    val data = res.data
+                    val msg = if (data.skippedDuplicateCount > 0) {
+                        "Dibawa ${data.copiedCount} pertanyaan, dilewati ${data.skippedDuplicateCount} (sudah ada)."
+                    } else {
+                        "${data.copiedCount} pertanyaan dibawa ke kunjungan tujuan."
+                    }
+                    onResult(msg)
+                }
+                is AppResult.Failure -> {
+                    onResult("Gagal membawa pertanyaan.")
+                }
+            }
+        }
+    }
+
+    fun deleteAttachment(attachment: Attachment) {
+        viewModelScope.launch {
+            attachmentRepository.delete(attachment.id)
         }
     }
 

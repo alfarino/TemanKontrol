@@ -3,13 +3,17 @@ package id.temankontrol.app.data.repository
 import android.database.sqlite.SQLiteConstraintException
 import id.temankontrol.app.core.common.AppError
 import id.temankontrol.app.core.common.AppResult
+import id.temankontrol.app.data.local.dao.AttachmentDao
 import id.temankontrol.app.data.local.dao.QuestionDao
 import id.temankontrol.app.data.local.entity.QuestionEntity
 import id.temankontrol.app.data.local.mapper.toDomain
+import id.temankontrol.app.data.media.MediaAttachmentManager
 import id.temankontrol.app.domain.model.*
+import id.temankontrol.app.domain.repository.CopyQuestionsResult
 import id.temankontrol.app.domain.repository.QuestionRepository
 import id.temankontrol.app.domain.validation.Validation
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.Instant
 import java.util.UUID
@@ -18,7 +22,9 @@ import javax.inject.Singleton
 
 @Singleton
 class RoomQuestionRepository @Inject constructor(
-    private val questionDao: QuestionDao
+    private val questionDao: QuestionDao,
+    private val attachmentDao: AttachmentDao,
+    private val mediaManager: MediaAttachmentManager
 ) : QuestionRepository {
 
     override fun observeByConsultation(id: ConsultationId): Flow<List<Question>> {
@@ -38,6 +44,10 @@ class RoomQuestionRepository @Inject constructor(
         if (textValidation is AppResult.Failure) return textValidation
         val validatedText = (textValidation as AppResult.Success).data
 
+        val answerValidation = Validation.validateAnswerText(input.answer)
+        if (answerValidation is AppResult.Failure) return answerValidation
+        val validatedAnswer = (answerValidation as AppResult.Success).data
+
         val currentPriorityCount = questionDao.priorityCount(id.value, null)
         val priorityCheck = Validation.validatePriorityLimit(currentPriorityCount, input.isPriority)
         if (priorityCheck is AppResult.Failure) return priorityCheck
@@ -54,7 +64,9 @@ class RoomQuestionRepository @Inject constructor(
             isPriority = input.isPriority,
             isDiscussed = false,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            answer = validatedAnswer,
+            answerUpdatedAt = if (validatedAnswer != null) now else null
         )
 
         return try {
@@ -72,6 +84,10 @@ class RoomQuestionRepository @Inject constructor(
         if (textValidation is AppResult.Failure) return textValidation
         val validatedText = (textValidation as AppResult.Success).data
 
+        val answerValidation = Validation.validateAnswerText(input.answer)
+        if (answerValidation is AppResult.Failure) return answerValidation
+        val validatedAnswer = (answerValidation as AppResult.Success).data
+
         val existing = questionDao.getById(questionId)
             ?: return AppResult.Failure(AppError.NotFound)
 
@@ -80,11 +96,20 @@ class RoomQuestionRepository @Inject constructor(
         if (priorityCheck is AppResult.Failure) return priorityCheck
 
         val normalizedText = Validation.normalizeQuestionForDuplicateCheck(validatedText)
+        val now = Instant.now().toEpochMilli()
+        val answerUpdatedAt = when {
+            validatedAnswer == null -> null
+            validatedAnswer != existing.answer -> now
+            else -> existing.answerUpdatedAt ?: now
+        }
+
         val updated = existing.copy(
             text = validatedText,
             textNormalized = normalizedText,
             isPriority = input.isPriority,
-            updatedAt = Instant.now().toEpochMilli()
+            updatedAt = now,
+            answer = validatedAnswer,
+            answerUpdatedAt = answerUpdatedAt
         )
 
         return try {
@@ -92,6 +117,25 @@ class RoomQuestionRepository @Inject constructor(
             AppResult.Success(Unit)
         } catch (e: SQLiteConstraintException) {
             AppResult.Failure(AppError.Duplicate)
+        } catch (e: Exception) {
+            AppResult.Failure(AppError.Storage)
+        }
+    }
+
+    override suspend fun updateAnswer(questionId: String, answer: String?): AppResult<Unit> {
+        val answerValidation = Validation.validateAnswerText(answer)
+        if (answerValidation is AppResult.Failure) return answerValidation
+        val validatedAnswer = (answerValidation as AppResult.Success).data
+
+        val now = Instant.now().toEpochMilli()
+        return try {
+            val rows = questionDao.updateAnswer(
+                id = questionId,
+                answer = validatedAnswer,
+                answerUpdatedAt = if (validatedAnswer != null) now else null,
+                updatedAt = now
+            )
+            if (rows > 0) AppResult.Success(Unit) else AppResult.Failure(AppError.NotFound)
         } catch (e: Exception) {
             AppResult.Failure(AppError.Storage)
         }
@@ -112,8 +156,10 @@ class RoomQuestionRepository @Inject constructor(
 
     override suspend fun delete(questionId: String): AppResult<Unit> {
         return try {
+            val qAttachments = attachmentDao.getByQuestionId(questionId)
             val rows = questionDao.delete(questionId)
             if (rows > 0) {
+                qAttachments.forEach { mediaManager.deleteFile(it.consultationId, it.fileName) }
                 AppResult.Success(Unit)
             } else {
                 AppResult.Failure(AppError.NotFound)
@@ -127,6 +173,48 @@ class RoomQuestionRepository @Inject constructor(
         return try {
             val count = questionDao.priorityCount(id.value, excludeQuestionId)
             AppResult.Success(count)
+        } catch (e: Exception) {
+            AppResult.Failure(AppError.Storage)
+        }
+    }
+
+    override suspend fun copyUnansweredQuestions(
+        fromConsultationId: ConsultationId,
+        toConsultationId: ConsultationId,
+        questionIds: Set<String>?
+    ): AppResult<CopyQuestionsResult> {
+        return try {
+            val sourceQuestions = questionDao.observeByConsultation(fromConsultationId.value).first()
+                .filter { !it.isDiscussed && (questionIds == null || it.id in questionIds) }
+            val existingTarget = questionDao.observeByConsultation(toConsultationId.value).first()
+                .map { it.textNormalized }
+                .toMutableSet()
+
+            val now = Instant.now().toEpochMilli()
+            var copied = 0
+            var skipped = 0
+            for (q in sourceQuestions) {
+                if (q.textNormalized in existingTarget) {
+                    skipped++
+                } else {
+                    existingTarget.add(q.textNormalized)
+                    val newId = "q-" + UUID.randomUUID().toString().take(8)
+                    questionDao.insert(
+                        QuestionEntity(
+                            id = newId,
+                            consultationId = toConsultationId.value,
+                            text = q.text,
+                            textNormalized = q.textNormalized,
+                            isPriority = q.isPriority,
+                            isDiscussed = false,
+                            createdAt = now,
+                            updatedAt = now
+                        )
+                    )
+                    copied++
+                }
+            }
+            AppResult.Success(CopyQuestionsResult(copied, skipped))
         } catch (e: Exception) {
             AppResult.Failure(AppError.Storage)
         }

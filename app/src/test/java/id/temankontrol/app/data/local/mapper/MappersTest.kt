@@ -1,6 +1,8 @@
 package id.temankontrol.app.data.local.mapper
 
 import id.temankontrol.app.data.local.entity.*
+import id.temankontrol.app.domain.model.AttachmentKind
+import id.temankontrol.app.domain.model.AttachmentTarget
 import id.temankontrol.app.domain.model.ConsultationStatus
 import org.junit.Assert.*
 import org.junit.Test
@@ -78,20 +80,52 @@ class MappersTest {
         val entity = QuestionEntity(
             id = "q-1",
             consultationId = "c-1",
-            text = "Apakah obat aman?",
-            textNormalized = "apakah obat aman?",
+            text = "Bagaimana cara minum obat?",
+            textNormalized = "bagaimana cara minum obat?",
             isPriority = true,
             isDiscussed = false,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            answer = "Diminum sesudah makan pagi.",
+            answerUpdatedAt = now + 500
         )
 
         val domain = entity.toDomain()
         assertEquals("q-1", domain.id)
         assertEquals("c-1", domain.consultationId.value)
-        assertEquals("Apakah obat aman?", domain.text)
+        assertEquals("Bagaimana cara minum obat?", domain.text)
         assertTrue(domain.isPriority)
         assertFalse(domain.isDiscussed)
+        assertEquals("Diminum sesudah makan pagi.", domain.answer)
+        assertEquals(Instant.ofEpochMilli(now + 500), domain.answerUpdatedAt)
+    }
+
+    @Test
+    fun attachmentEntityToDomain() {
+        val now = 1775500000000L
+        val entity = AttachmentEntity(
+            id = "att-1",
+            consultationId = "c-1",
+            questionId = "q-1",
+            target = "QUESTION",
+            kind = "VOICE",
+            fileName = "penjelasan.m4a",
+            mimeType = "audio/mp4",
+            sizeBytes = 128000L,
+            durationMs = 32000L,
+            caption = "Rekaman dokter",
+            uriString = null,
+            createdAt = now
+        )
+
+        val domain = entity.toDomain()
+        assertEquals("att-1", domain.id)
+        assertEquals("c-1", domain.consultationId.value)
+        assertEquals("q-1", domain.questionId)
+        assertEquals(AttachmentTarget.QUESTION, domain.target)
+        assertEquals(AttachmentKind.VOICE, domain.kind)
+        assertEquals(32000L, domain.durationMs)
+        assertEquals("Rekaman dokter", domain.caption)
     }
 
     @Test

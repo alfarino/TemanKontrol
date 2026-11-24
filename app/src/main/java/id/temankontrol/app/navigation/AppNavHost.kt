@@ -1,4 +1,4 @@
-﻿package id.temankontrol.app.navigation
+package id.temankontrol.app.navigation
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -16,14 +16,19 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
 import id.temankontrol.app.R
 import id.temankontrol.app.feature.about.AboutScreen
+import id.temankontrol.app.feature.backup.BackupScreen
 import id.temankontrol.app.feature.consultation.detail.ConsultationDetailScreen
 import id.temankontrol.app.feature.consultation.form.ConsultationFormScreen
+import id.temankontrol.app.feature.consultation.mode.ConsultationModeScreen
 import id.temankontrol.app.feature.followup.FollowUpScreen
 import id.temankontrol.app.feature.history.HistoryScreen
 import id.temankontrol.app.feature.home.HomeScreen
 import id.temankontrol.app.feature.note.NoteScreen
 import id.temankontrol.app.feature.notice.NoticeScreen
 import id.temankontrol.app.feature.question.QuestionScreen
+import id.temankontrol.app.feature.reminder.ReminderSettingsScreen
+import id.temankontrol.app.feature.settings.SettingsScreen
+import id.temankontrol.app.feature.summary.SummaryPreviewScreen
 
 private data class TopLevelDestination<T : Any>(
     val route: T,
@@ -40,11 +45,29 @@ private val topLevelDestinations = listOf(
 @Composable
 fun AppNavHost(
     isNoticeAccepted: Boolean,
+    deepLinkConsultationId: String? = null,
+    deepLinkOpenBackup: Boolean = false,
+    onDeepLinkConsumed: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+
+    LaunchedEffect(isNoticeAccepted, deepLinkConsultationId, deepLinkOpenBackup) {
+        if (!isNoticeAccepted) return@LaunchedEffect
+        if (!deepLinkConsultationId.isNullOrBlank()) {
+            navController.navigate(ConsultationDetailRoute(id = deepLinkConsultationId)) {
+                launchSingleTop = true
+            }
+            onDeepLinkConsumed()
+        } else if (deepLinkOpenBackup) {
+            navController.navigate(BackupRoute) {
+                launchSingleTop = true
+            }
+            onDeepLinkConsumed()
+        }
+    }
 
     val isTopLevelDestination = topLevelDestinations.any { topDest ->
         currentDestination?.hierarchy?.any { it.hasRoute(topDest.route::class) } == true
@@ -101,6 +124,9 @@ fun AppNavHost(
                     },
                     onNavigateToHistory = {
                         navController.navigate(HistoryRoute)
+                    },
+                    onNavigateToSettings = {
+                        navController.navigate(SettingsRoute)
                     }
                 )
             }
@@ -117,7 +143,36 @@ fun AppNavHost(
                 AboutScreen(
                     onNavigateToNotice = {
                         navController.navigate(NoticeRoute)
+                    },
+                    onNavigateToSettings = {
+                        navController.navigate(SettingsRoute)
+                    },
+                    onNavigateToBackup = {
+                        navController.navigate(BackupRoute)
+                    },
+                    onNavigateToReminders = {
+                        navController.navigate(ReminderSettingsRoute)
                     }
+                )
+            }
+
+            composable<SettingsRoute> {
+                SettingsScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToBackup = { navController.navigate(BackupRoute) },
+                    onNavigateToReminders = { navController.navigate(ReminderSettingsRoute) }
+                )
+            }
+
+            composable<BackupRoute> {
+                BackupScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable<ReminderSettingsRoute> {
+                ReminderSettingsScreen(
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 
@@ -127,6 +182,9 @@ fun AppNavHost(
                     onNavigateToEdit = { id ->
                         navController.navigate(ConsultationFormRoute(id = id))
                     },
+                    onNavigateToCreateConsultation = {
+                        navController.navigate(ConsultationFormRoute())
+                    },
                     onNavigateToQuestions = { id ->
                         navController.navigate(QuestionRoute(consultationId = id))
                     },
@@ -135,6 +193,12 @@ fun AppNavHost(
                     },
                     onNavigateToFollowUps = { id ->
                         navController.navigate(FollowUpRoute(consultationId = id))
+                    },
+                    onNavigateToConsultationMode = { id ->
+                        navController.navigate(ConsultationModeRoute(consultationId = id))
+                    },
+                    onNavigateToSummary = { id ->
+                        navController.navigate(SummaryPreviewRoute(consultationId = id))
                     }
                 )
             }
@@ -164,6 +228,24 @@ fun AppNavHost(
 
             composable<FollowUpRoute> {
                 FollowUpScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable<ConsultationModeRoute> {
+                ConsultationModeScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToNotes = { id ->
+                        navController.navigate(NoteRoute(consultationId = id))
+                    },
+                    onNavigateToQuestions = { id ->
+                        navController.navigate(QuestionRoute(consultationId = id))
+                    }
+                )
+            }
+
+            composable<SummaryPreviewRoute> {
+                SummaryPreviewScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }

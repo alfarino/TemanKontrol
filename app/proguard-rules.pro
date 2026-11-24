@@ -53,6 +53,9 @@
 -keep class id.temankontrol.app.navigation.** { *; }
 -keep interface id.temankontrol.app.navigation.** { *; }
 -keep class id.temankontrol.app.domain.model.** { *; }
+-keep class id.temankontrol.app.data.backup.** { *; }
+-keep class id.temankontrol.app.data.reminder.** { *; }
+-keep class androidx.biometric.** { *; }
 
 # ===================================================================
 # Hilt / Dagger Dependency Injection

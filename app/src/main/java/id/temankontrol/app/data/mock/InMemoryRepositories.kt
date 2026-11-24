@@ -1,4 +1,4 @@
-﻿package id.temankontrol.app.data.mock
+package id.temankontrol.app.data.mock
 
 import id.temankontrol.app.core.common.AppError
 import id.temankontrol.app.core.common.AppResult
@@ -191,12 +191,13 @@ class InMemoryConsultationRepository @Inject constructor(
         list.removeAt(index)
         dataStore.setConsultations(list)
 
-        // Cascade delete: questions, note, follow-up actions
+        // Cascade delete: questions, note, follow-up actions, attachments
         dataStore.setQuestions(dataStore.questions.value.filter { it.consultationId != id })
         val updatedNotes = dataStore.notes.value.toMutableMap()
         updatedNotes.remove(id)
         dataStore.setNotes(updatedNotes)
         dataStore.setFollowUps(dataStore.followUps.value.filter { it.consultationId != id })
+        dataStore.setAttachments(dataStore.attachments.value.filter { it.consultationId != id })
 
         return AppResult.Success(Unit)
     }
@@ -260,6 +261,10 @@ class InMemoryQuestionRepository @Inject constructor(
         val priorityCheck = Validation.validatePriorityLimit(currentPriorityCount, input.isPriority)
         if (priorityCheck is AppResult.Failure) return priorityCheck
 
+        val answerValidation = Validation.validateAnswerText(input.answer)
+        if (answerValidation is AppResult.Failure) return answerValidation
+        val validatedAnswer = (answerValidation as AppResult.Success).data
+
         val qId = "q-" + UUID.randomUUID().toString().take(8)
         val now = Instant.now()
         val item = Question(
@@ -269,7 +274,9 @@ class InMemoryQuestionRepository @Inject constructor(
             isPriority = input.isPriority,
             isDiscussed = false,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            answer = validatedAnswer,
+            answerUpdatedAt = if (validatedAnswer != null) now else null
         )
 
         dataStore.setQuestions(dataStore.questions.value + item)
@@ -301,12 +308,46 @@ class InMemoryQuestionRepository @Inject constructor(
         val priorityCheck = Validation.validatePriorityLimit(currentPriorityCount, input.isPriority)
         if (priorityCheck is AppResult.Failure) return priorityCheck
 
+        val answerValidation = Validation.validateAnswerText(input.answer)
+        if (answerValidation is AppResult.Failure) return answerValidation
+        val validatedAnswer = (answerValidation as AppResult.Success).data
+
+        val now = Instant.now()
         list[index] = existing.copy(
             text = validatedText,
             isPriority = input.isPriority,
-            updatedAt = Instant.now()
+            updatedAt = now,
+            answer = validatedAnswer,
+            answerUpdatedAt = if (validatedAnswer != existing.answer) {
+                if (validatedAnswer != null) now else null
+            } else {
+                existing.answerUpdatedAt
+            }
         )
 
+        dataStore.setQuestions(list)
+        return AppResult.Success(Unit)
+    }
+
+    override suspend fun updateAnswer(questionId: String, answer: String?): AppResult<Unit> {
+        checkScenario()
+        if (scenarioManager.currentScenario.value == MockScenario.ERROR) {
+            return AppResult.Failure(AppError.Storage)
+        }
+        val answerValidation = Validation.validateAnswerText(answer)
+        if (answerValidation is AppResult.Failure) return answerValidation
+        val validatedAnswer = (answerValidation as AppResult.Success).data
+
+        val list = dataStore.questions.value.toMutableList()
+        val index = list.indexOfFirst { it.id == questionId }
+        if (index == -1) return AppResult.Failure(AppError.NotFound)
+
+        val now = Instant.now()
+        list[index] = list[index].copy(
+            answer = validatedAnswer,
+            answerUpdatedAt = if (validatedAnswer != null) now else null,
+            updatedAt = now
+        )
         dataStore.setQuestions(list)
         return AppResult.Success(Unit)
     }
@@ -342,6 +383,10 @@ class InMemoryQuestionRepository @Inject constructor(
 
         list.removeAt(index)
         dataStore.setQuestions(list)
+        // Detach or remove question attachments
+        dataStore.setAttachments(
+            dataStore.attachments.value.filterNot { it.questionId == questionId }
+        )
         return AppResult.Success(Unit)
     }
 
@@ -350,6 +395,51 @@ class InMemoryQuestionRepository @Inject constructor(
             it.consultationId == id && it.isPriority && it.id != excludeQuestionId
         }
         return AppResult.Success(count)
+    }
+
+    override suspend fun copyUnansweredQuestions(
+        fromConsultationId: ConsultationId,
+        toConsultationId: ConsultationId,
+        questionIds: Set<String>?
+    ): AppResult<CopyQuestionsResult> {
+        checkScenario()
+        if (scenarioManager.currentScenario.value == MockScenario.ERROR) {
+            return AppResult.Failure(AppError.Storage)
+        }
+        val all = dataStore.questions.value
+        val sourceQuestions = all.filter { q ->
+            q.consultationId == fromConsultationId && !q.isDiscussed && (questionIds == null || q.id in questionIds)
+        }
+        val targetNormalized = all.filter { it.consultationId == toConsultationId }
+            .map { Validation.normalizeQuestionForDuplicateCheck(it.text) }
+            .toMutableSet()
+
+        val now = Instant.now()
+        val copied = mutableListOf<Question>()
+        var skipped = 0
+        for (q in sourceQuestions) {
+            val norm = Validation.normalizeQuestionForDuplicateCheck(q.text)
+            if (norm in targetNormalized) {
+                skipped++
+            } else {
+                targetNormalized.add(norm)
+                copied.add(
+                    Question(
+                        id = "q-" + UUID.randomUUID().toString().take(8),
+                        consultationId = toConsultationId,
+                        text = q.text,
+                        isPriority = q.isPriority,
+                        isDiscussed = false,
+                        createdAt = now,
+                        updatedAt = now,
+                        answer = null,
+                        answerUpdatedAt = null
+                    )
+                )
+            }
+        }
+        dataStore.setQuestions(all + copied)
+        return AppResult.Success(CopyQuestionsResult(copied.size, skipped))
     }
 }
 
@@ -554,10 +644,115 @@ class InMemoryPreferencesRepository @Inject constructor(
     private val dataStore: InMemoryDataStore
 ) : PreferencesRepository {
 
+    private val _reminderSettings = kotlinx.coroutines.flow.MutableStateFlow(ReminderSettings())
+    private val _appLockSettings = kotlinx.coroutines.flow.MutableStateFlow(AppLockSettings())
+    private val _lastBackupAt = kotlinx.coroutines.flow.MutableStateFlow<Instant?>(null)
+    private val _dataChanged = kotlinx.coroutines.flow.MutableStateFlow(true)
+
     override val noticeAccepted: Flow<Boolean> = dataStore.noticeAccepted
+    override val reminderSettings: Flow<ReminderSettings> = _reminderSettings
+    override val appLockSettings: Flow<AppLockSettings> = _appLockSettings
+    override val lastBackupAt: Flow<Instant?> = _lastBackupAt
+    override val dataChangedSinceBackup: Flow<Boolean> = _dataChanged
 
     override suspend fun setNoticeAccepted(): AppResult<Unit> {
         dataStore.setNoticeAccepted(true)
+        return AppResult.Success(Unit)
+    }
+
+    override suspend fun updateReminderSettings(
+        transform: (ReminderSettings) -> ReminderSettings
+    ): AppResult<Unit> {
+        _reminderSettings.value = transform(_reminderSettings.value)
+        return AppResult.Success(Unit)
+    }
+
+    override suspend fun updateAppLockSettings(
+        transform: (AppLockSettings) -> AppLockSettings
+    ): AppResult<Unit> {
+        _appLockSettings.value = transform(_appLockSettings.value)
+        return AppResult.Success(Unit)
+    }
+
+    override suspend fun recordBackupCreated(at: Instant): AppResult<Unit> {
+        _lastBackupAt.value = at
+        _dataChanged.value = false
+        return AppResult.Success(Unit)
+    }
+
+    override suspend fun markDataChanged(): AppResult<Unit> {
+        _dataChanged.value = true
+        return AppResult.Success(Unit)
+    }
+}
+
+@Singleton
+class InMemoryAttachmentRepository @Inject constructor(
+    private val dataStore: InMemoryDataStore
+) : AttachmentRepository {
+
+    override fun observeByConsultation(id: ConsultationId): Flow<List<Attachment>> {
+        return dataStore.attachments.map { list ->
+            list.filter { it.consultationId == id }.sortedByDescending { it.createdAt }
+        }
+    }
+
+    override fun observeAll(): Flow<List<Attachment>> = dataStore.attachments
+
+    override suspend fun addAttachment(
+        consultationId: ConsultationId,
+        questionId: String?,
+        target: AttachmentTarget,
+        kind: AttachmentKind,
+        fileName: String,
+        mimeType: String,
+        sizeBytes: Long,
+        durationMs: Long?,
+        caption: String?,
+        uriString: String?
+    ): AppResult<String> {
+        val captionResult = Validation.validateCaptionText(caption)
+        if (captionResult is AppResult.Failure) return captionResult
+        val validatedCaption = (captionResult as AppResult.Success).data
+
+        val attId = "att-" + UUID.randomUUID().toString().take(8)
+        val item = Attachment(
+            id = attId,
+            consultationId = consultationId,
+            questionId = questionId,
+            target = target,
+            kind = kind,
+            fileName = fileName,
+            mimeType = mimeType,
+            sizeBytes = sizeBytes,
+            durationMs = durationMs,
+            caption = validatedCaption,
+            uriString = uriString,
+            createdAt = Instant.now()
+        )
+        dataStore.setAttachments(dataStore.attachments.value + item)
+        return AppResult.Success(attId)
+    }
+
+    override suspend fun updateCaption(attachmentId: String, caption: String?): AppResult<Unit> {
+        val captionResult = Validation.validateCaptionText(caption)
+        if (captionResult is AppResult.Failure) return captionResult
+        val validatedCaption = (captionResult as AppResult.Success).data
+
+        val list = dataStore.attachments.value.toMutableList()
+        val idx = list.indexOfFirst { it.id == attachmentId }
+        if (idx == -1) return AppResult.Failure(AppError.NotFound)
+        list[idx] = list[idx].copy(caption = validatedCaption)
+        dataStore.setAttachments(list)
+        return AppResult.Success(Unit)
+    }
+
+    override suspend fun delete(attachmentId: String): AppResult<Unit> {
+        val list = dataStore.attachments.value.toMutableList()
+        val idx = list.indexOfFirst { it.id == attachmentId }
+        if (idx == -1) return AppResult.Failure(AppError.NotFound)
+        list.removeAt(idx)
+        dataStore.setAttachments(list)
         return AppResult.Success(Unit)
     }
 }

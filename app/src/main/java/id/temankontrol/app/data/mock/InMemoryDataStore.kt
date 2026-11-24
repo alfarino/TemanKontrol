@@ -1,5 +1,6 @@
-﻿package id.temankontrol.app.data.mock
+package id.temankontrol.app.data.mock
 
+import id.temankontrol.app.domain.model.Attachment
 import id.temankontrol.app.domain.model.Consultation
 import id.temankontrol.app.domain.model.ConsultationId
 import id.temankontrol.app.domain.model.ConsultationNote
@@ -30,6 +31,9 @@ class InMemoryDataStore @Inject constructor(
     private val _followUps = MutableStateFlow<List<FollowUpAction>>(emptyList())
     val followUps: StateFlow<List<FollowUpAction>> = _followUps.asStateFlow()
 
+    private val _attachments = MutableStateFlow<List<Attachment>>(emptyList())
+    val attachments: StateFlow<List<Attachment>> = _attachments.asStateFlow()
+
     private val _noticeAccepted = MutableStateFlow(false)
     val noticeAccepted: StateFlow<Boolean> = _noticeAccepted.asStateFlow()
 
@@ -45,6 +49,7 @@ class InMemoryDataStore @Inject constructor(
                 _questions.value = SampleData.getSampleQuestions()
                 _notes.value = SampleData.getSampleNotes().associateBy { it.consultationId }
                 _followUps.value = SampleData.getSampleFollowUps()
+                _attachments.value = SampleData.getSampleAttachments()
                 _noticeAccepted.value = true
             }
             MockScenario.EMPTY -> {
@@ -52,6 +57,7 @@ class InMemoryDataStore @Inject constructor(
                 _questions.value = emptyList()
                 _notes.value = emptyMap()
                 _followUps.value = emptyList()
+                _attachments.value = emptyList()
                 _noticeAccepted.value = false
             }
             MockScenario.ERROR -> {
@@ -60,6 +66,7 @@ class InMemoryDataStore @Inject constructor(
                 _questions.value = emptyList()
                 _notes.value = emptyMap()
                 _followUps.value = emptyList()
+                _attachments.value = emptyList()
                 _noticeAccepted.value = true
             }
         }
@@ -75,5 +82,6 @@ class InMemoryDataStore @Inject constructor(
     fun setQuestions(list: List<Question>) { _questions.value = list }
     fun setNotes(map: Map<ConsultationId, ConsultationNote>) { _notes.value = map }
     fun setFollowUps(list: List<FollowUpAction>) { _followUps.value = list }
+    fun setAttachments(list: List<Attachment>) { _attachments.value = list }
     fun setNoticeAccepted(accepted: Boolean) { _noticeAccepted.value = accepted }
 }

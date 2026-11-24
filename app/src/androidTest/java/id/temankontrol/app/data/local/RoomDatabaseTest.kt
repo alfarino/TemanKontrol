@@ -24,6 +24,8 @@ class RoomDatabaseTest {
     private lateinit var questionDao: QuestionDao
     private lateinit var noteDao: NoteDao
     private lateinit var followUpDao: FollowUpDao
+    private lateinit var attachmentDao: AttachmentDao
+    private lateinit var reminderLogDao: ReminderLogDao
 
     @Before
     fun createDb() {
@@ -35,6 +37,8 @@ class RoomDatabaseTest {
         questionDao = db.questionDao()
         noteDao = db.noteDao()
         followUpDao = db.followUpDao()
+        attachmentDao = db.attachmentDao()
+        reminderLogDao = db.reminderLogDao()
     }
 
     @After
@@ -277,5 +281,89 @@ class RoomDatabaseTest {
         assertNotNull(updated)
         assertTrue(updated!!.isCompleted)
         assertEquals(completedTime, updated.completedAt)
+    }
+
+    @Test
+    fun attachmentAndQuestionAnswer_cascadeDeletesWithQuestionAndConsultation() = runBlocking {
+        val cId = "c-att-room"
+        val now = 1775500000000L
+        consultationDao.insert(
+            ConsultationEntity(
+                id = cId,
+                title = "Tes Lampiran",
+                appointmentAt = now,
+                reason = "Alasan tes lampiran",
+                facilityName = null,
+                providerName = null,
+                status = "SCHEDULED",
+                createdAt = now,
+                updatedAt = now
+            )
+        )
+        questionDao.insert(
+            QuestionEntity(
+                id = "q-att-1",
+                consultationId = cId,
+                text = "Bagaimana cara minum obat?",
+                textNormalized = "bagaimana cara minum obat?",
+                isPriority = true,
+                isDiscussed = false,
+                createdAt = now,
+                updatedAt = now
+            )
+        )
+        questionDao.updateAnswer("q-att-1", "Minum 1 kali sehari sesudah makan.", now, now)
+        assertEquals("Minum 1 kali sehari sesudah makan.", questionDao.getById("q-att-1")?.answer)
+
+        attachmentDao.insert(
+            AttachmentEntity(
+                id = "att-q",
+                consultationId = cId,
+                questionId = "q-att-1",
+                target = "QUESTION",
+                kind = "PHOTO",
+                fileName = "foto.jpg",
+                mimeType = "image/jpeg",
+                sizeBytes = 12345L,
+                durationMs = null,
+                caption = "Foto pertanyaan",
+                uriString = null,
+                createdAt = now
+            )
+        )
+        attachmentDao.insert(
+            AttachmentEntity(
+                id = "att-note",
+                consultationId = cId,
+                questionId = null,
+                target = "ADDITIONAL_NOTE",
+                kind = "VOICE",
+                fileName = "vn.m4a",
+                mimeType = "audio/mp4",
+                sizeBytes = 24000L,
+                durationMs = 6000L,
+                caption = "VN tambahan",
+                uriString = null,
+                createdAt = now
+            )
+        )
+
+        // Delete question -> question attachment removed, additional note attachment stays
+        questionDao.delete("q-att-1")
+        assertNull(attachmentDao.getById("att-q"))
+        assertNotNull(attachmentDao.getById("att-note"))
+
+        // Delete consultation -> additional note attachment cascades
+        consultationDao.delete(cId)
+        assertNull(attachmentDao.getById("att-note"))
+    }
+
+    @Test
+    fun reminderLog_deduplicatesByKey() = runBlocking {
+        assertFalse(reminderLogDao.exists("VISIT:c-1:1000"))
+        reminderLogDao.insert(ReminderLogEntity(key = "VISIT:c-1:1000", firedAt = 1000L))
+        assertTrue(reminderLogDao.exists("VISIT:c-1:1000"))
+        reminderLogDao.deleteOlderThan(2000L)
+        assertFalse(reminderLogDao.exists("VISIT:c-1:1000"))
     }
 }

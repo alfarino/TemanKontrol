@@ -4,6 +4,11 @@
 
     <!-- Enforce offline-only per DEC-011 and AC-19 -->
     <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <!-- Voice Note recording (requested contextually in F-13) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Local reminders (requested contextually in F-12) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".TemanKontrolApp"
@@ -19,7 +24,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.TemanKontrol"
+            android:theme="@style/Theme.TemanKontrol.Starting"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -27,6 +32,30 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <receiver
+            android:name=".data.reminder.ReminderReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".data.reminder.BootRescheduleReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

@@ -1,4 +1,4 @@
-﻿package id.temankontrol.app.domain.validation
+package id.temankontrol.app.domain.validation
 
 import id.temankontrol.app.core.common.AppError
 import id.temankontrol.app.core.common.AppResult
@@ -69,16 +69,29 @@ class ValidationTest {
     }
 
     @Test
-    fun vr07_priorityLimit_fourthPriority_rejected() {
+    fun vr07_priorityLimit_fourthPriority_allowed() {
         val result = Validation.validatePriorityLimit(currentPriorityCount = 3, addingPriority = true)
-        assertTrue(result is AppResult.Failure)
-        assertEquals(AppError.PriorityLimitExceeded, (result as AppResult.Failure).error)
+        assertTrue(result is AppResult.Success)
     }
 
     @Test
     fun vr07_priorityLimit_underLimit_accepted() {
         val result = Validation.validatePriorityLimit(currentPriorityCount = 2, addingPriority = true)
         assertTrue(result is AppResult.Success)
+    }
+
+    @Test
+    fun vr13_answerText_overMaxLength_rejected() {
+        val result = Validation.validateAnswerText("a".repeat(1001))
+        assertTrue(result is AppResult.Failure)
+    }
+
+    @Test
+    fun vr18_closedQuestionDetection_identifiesYesNoAndAllowsOpen() {
+        assertTrue(Validation.isLikelyClosedQuestion("Apakah obat ini diminum sesudah makan?"))
+        assertTrue(Validation.isLikelyClosedQuestion("Bolehkah saya olahraga berat?"))
+        assertFalse(Validation.isLikelyClosedQuestion("Bagaimana cara minum obat ini dengan benar?"))
+        assertFalse(Validation.isLikelyClosedQuestion("Mengapa tekanan darah saya masih tinggi?"))
     }
 
     @Test

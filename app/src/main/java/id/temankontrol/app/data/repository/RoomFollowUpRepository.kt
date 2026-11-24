@@ -5,8 +5,10 @@ import id.temankontrol.app.core.common.AppResult
 import id.temankontrol.app.data.local.dao.FollowUpDao
 import id.temankontrol.app.data.local.entity.FollowUpActionEntity
 import id.temankontrol.app.data.local.mapper.toDomain
+import id.temankontrol.app.data.reminder.ReminderScheduler
 import id.temankontrol.app.domain.model.*
 import id.temankontrol.app.domain.repository.FollowUpRepository
+import id.temankontrol.app.domain.repository.PreferencesRepository
 import id.temankontrol.app.domain.validation.Validation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -18,7 +20,9 @@ import javax.inject.Singleton
 
 @Singleton
 class RoomFollowUpRepository @Inject constructor(
-    private val followUpDao: FollowUpDao
+    private val followUpDao: FollowUpDao,
+    private val reminderScheduler: ReminderScheduler,
+    private val preferencesRepository: PreferencesRepository
 ) : FollowUpRepository {
 
     override fun observeByConsultation(id: ConsultationId): Flow<List<FollowUpAction>> {
@@ -61,6 +65,8 @@ class RoomFollowUpRepository @Inject constructor(
 
         return try {
             followUpDao.insert(entity)
+            preferencesRepository.markDataChanged()
+            reminderScheduler.rescheduleAll()
             AppResult.Success(actionId)
         } catch (e: Exception) {
             AppResult.Failure(AppError.Storage)
@@ -83,6 +89,8 @@ class RoomFollowUpRepository @Inject constructor(
 
         return try {
             followUpDao.update(updated)
+            preferencesRepository.markDataChanged()
+            reminderScheduler.rescheduleAll()
             AppResult.Success(Unit)
         } catch (e: Exception) {
             AppResult.Failure(AppError.Storage)
@@ -95,6 +103,8 @@ class RoomFollowUpRepository @Inject constructor(
         return try {
             val rows = followUpDao.setCompleted(actionId, completed, completedAt, now)
             if (rows > 0) {
+                preferencesRepository.markDataChanged()
+                reminderScheduler.rescheduleAll()
                 AppResult.Success(Unit)
             } else {
                 AppResult.Failure(AppError.NotFound)
@@ -108,6 +118,8 @@ class RoomFollowUpRepository @Inject constructor(
         return try {
             val rows = followUpDao.delete(actionId)
             if (rows > 0) {
+                preferencesRepository.markDataChanged()
+                reminderScheduler.rescheduleAll()
                 AppResult.Success(Unit)
             } else {
                 AppResult.Failure(AppError.NotFound)

@@ -1,4 +1,4 @@
-﻿package id.temankontrol.app.feature.home
+package id.temankontrol.app.feature.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -32,6 +33,7 @@ fun HomeScreen(
     onNavigateToDetail: (String) -> Unit,
     onNavigateToCreate: () -> Unit,
     onNavigateToHistory: () -> Unit,
+    onNavigateToSettings: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -42,6 +44,7 @@ fun HomeScreen(
         onCreateClick = onNavigateToCreate,
         onSeeAllConsultationsClick = onNavigateToHistory,
         onPastDueBannerClick = onNavigateToHistory,
+        onSettingsClick = onNavigateToSettings,
         onToggleFollowUp = viewModel::toggleActionCompletion
     )
 }
@@ -53,13 +56,22 @@ fun HomeContent(
     onCreateClick: () -> Unit,
     onSeeAllConsultationsClick: () -> Unit,
     onPastDueBannerClick: () -> Unit,
+    onSettingsClick: () -> Unit = {},
     onToggleFollowUp: (String, Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     AppScaffold(
         topBar = {
             AppTopBar(
-                title = stringResource(R.string.app_name)
+                title = stringResource(R.string.app_name),
+                actions = {
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.nav_settings)
+                        )
+                    }
+                }
             )
         },
         floatingActionButton = {

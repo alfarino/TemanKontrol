@@ -3,17 +3,17 @@
 | Field | Value |
 |---|---|
 | Produk | Teman Kontrol |
-| Dokumen | `docs/PRD.md` (Single Source of Truth) |
-| Versi | **1.0** |
-| Status | **Approved** — OQ-01 s/d OQ-04 telah dijawab (lihat §2 Decision Log) |
-| Tanggal | 6 Oktober 2026 |
+| Dokumen | `docs/PRD.md` (Single Source of Truth Final) |
+| Versi | **2.0 (Final)** |
+| Status | **Approved (Final)** — Menggabungkan PRD v1.0 + seluruh revisi klien (`PRD-REVISION-FEATURE.md` sudah digabungkan ke dokumen ini) |
+| Tanggal | 17 November 2026 (v1.0: 6 Oktober 2026) |
 | Platform | Android only (minSdk 30 / Android 11) |
 | Stack | Kotlin + Jetpack Compose + Material 3 + Room + DataStore + Hilt |
 | Application ID | `id.temankontrol.app` |
-| Perangkat uji utama | Android Studio Virtual Device (Emulator API 30+) |
-| Deadline frontend | 8 Oktober 2026 (hard milestone) |
-| Deadline MVP | 6 November 2026 |
-| Arsip versi lama | `docs/archive/PRD_v0.2.md` |
+| Perangkat uji utama | Android Studio Virtual Device (Emulator API 30+) & Redmi Note 10S |
+| Target UI Revisi | Selesai (17 November 2026) |
+| Target Final v2.0 | Persiapan & implementasi engine lokal + Room v2/v3 |
+| Arsip versi lama | `docs/archive/PRD_v0.2.md`, `docs/PRD-REVISION-FEATURE.md` (draf revisi yang telah disatukan) |
 
 ---
 
@@ -67,7 +67,7 @@ Setiap perubahan pada dokumen ini:
 **Masalah.** Pasien sering datang ke konsultasi tanpa daftar pertanyaan yang terstruktur, kesulitan mencatat hasil pembicaraan, dan tidak punya satu tempat untuk melacak tindak lanjut. Panduan NHS menyarankan pasien menulis pertanyaan terpenting, mencatat hasil, dan memastikan langkah berikutnya; AHRQ QuestionBuilder membantu pasien menyiapkan pertanyaan sebelum kunjungan [REF-01][REF-02].
 
 **Solusi.** Teman Kontrol adalah aplikasi Android **offline-first, single-user, single-device** untuk:
-**sebelum kontrol** (menyiapkan & memprioritaskan pertanyaan) → **saat kontrol** (mencentang pertanyaan yang dibahas) → **setelah kontrol** (mencatat hasil & melacak tindak lanjut).
+**sebelum kontrol** (menyiapkan pertanyaan terbuka & memprioritaskan pertanyaan tanpa batas jumlah) → **saat kontrol** (Mode Konsultasi fokus, mencentang pertanyaan yang dibahas, mencatat jawaban, melampirkan foto & catatan suara per pertanyaan) → **setelah kontrol** (mencatat hasil konsultasi beserta lampiran foto/VN di catatan tambahan, melacak tindak lanjut, pengingat lokal, serta ekspor cadangan `.tkbackup` dan ringkasan).
 
 **Bukan:** alat diagnosis, triase, telemedicine, rekam medis resmi, atau pemberi rekomendasi klinis.
 
@@ -91,7 +91,7 @@ Setiap perubahan pada dokumen ini:
 | DEC-003 | Persistensi: **Room** (data utama) + **Preferences DataStore** (flag notice) | Room resmi Android, dukungan Flow, migration, foreign key cascade, transaksi atomik. | Active |
 | DEC-004 | Dependency Injection: **Hilt** (dengan KSP) | Standar Google, lifecycle-aware, memudahkan swap Mock ↔ Room. Wajib lolos Technical Spike TS-01 (§17.1). | Active |
 | DEC-005 | Milestone 8 Okt = **UI lengkap + mock in-memory**; data boleh hilang saat restart. Persistensi di Phase 2. Menjawab OQ-03. | Menjaga milestone realistis; kontrak repository sama sehingga swap tanpa redesign. | Active |
-| DEC-006 | **Backup dimatikan**: `android:allowBackup="false"`, data extraction rules mengecualikan semua domain | Catatan kesehatan tidak boleh keluar perangkat (NFR-014). | Active |
+| DEC-006 | **Auto Backup OS dimatikan**: `android:allowBackup="false"`, data extraction rules mengecualikan semua domain | Catatan kesehatan tidak boleh keluar perangkat tanpa izin pengguna (NFR-014); digantikan oleh cadangan manual berbasis berkas atas kendali pengguna (DEC-022). | Active (Amended by DEC-022) |
 | DEC-007 | Application ID & namespace: **`id.temankontrol.app`**; tanpa identitas institusi. Menjawab OQ-04. | `com.example` tidak boleh dirilis; identitas netral. | Active |
 | DEC-008 | Tema: **Light + Dark mengikuti sistem**, tanpa Dynamic Color | Warna brand & status konsisten di semua perangkat. | Active |
 | DEC-009 | Satu file PRD lengkap (produk + spesifikasi teknis) | SSOT tunggal, tidak ada dua dokumen yang bisa saling bertentangan. | Active |
@@ -99,14 +99,24 @@ Setiap perubahan pada dokumen ini:
 | DEC-011 | **Tidak mendeklarasikan izin INTERNET**; izin hasil merge dari library dihapus dengan `tools:node="remove"` | Jaminan teknis offline & privasi, bukan sekadar janji. | Active |
 | DEC-012 | Saran pertanyaan disimpan sebagai **konstanta Kotlin**, bukan JSON | Nol biaya parsing, nol I/O, type-safe. | Active |
 | DEC-013 | Font **sistem (Roboto)**; tanpa font unduhan | Nol ukuran tambahan, nol risiko gagal muat offline. | Active |
-| DEC-014 | Ikon: `material-icons-core` + ikon tambahan sebagai **vector drawable XML** dari Material Symbols; `material-icons-extended` **dilarang** | Extended memperlambat build dan membengkakkan debug APK. | Active |
-| DEC-015 | Enkripsi at-rest mengandalkan **File-Based Encryption Android** (wajib sejak Android 10); SQLCipher tidak dipakai di MVP | Mengurangi ukuran & overhead; app-private + FBE memadai untuk MVP. App lock di backlog. | Active |
+| DEC-014 | Ikon: `material-icons-core` + `material-icons-extended` (atau vector drawable XML bila ingin optimasi ukuran lebih jauh); `isShrinkResources = true` + R8 menjaga ukuran APK release tetap ≤ 10 MB | Revisi fitur membutuhkan beragam ikon (kamera, mikrofon, kunci, cadangan, notifikasi, bagikan); release APK terbukti 6,81 MiB (< 10 MB). *Supersedes larangan `material-icons-extended` pada v1.0.* | Active |
+| DEC-015 | Enkripsi database at-rest mengandalkan **File-Based Encryption Android**; akses aplikasi dilindungi oleh **Kunci Aplikasi** (`BiometricPrompt` + kunci layar HP, DEC-028); berkas cadangan dilindungi enkripsi **AES-256-GCM + PBKDF2** opsional (DEC-022) | Mengurangi overhead SQLCipher sambil tetap melindungi privasi lampiran foto/VN dan berkas cadangan. | Active (Amended by DEC-022 & DEC-028) |
 | DEC-016 | Navigasi: **Navigation Compose type-safe routes** (kotlinx.serialization) | Argumen route ter-validasi compiler. | Active |
 | DEC-017 | Semua penghapusan (kunjungan, pertanyaan, tindak lanjut) memakai **dialog konfirmasi**, bukan undo snackbar | Satu pola yang konsisten dan sederhana. | Active |
 | DEC-018 | Timeline frontend: **Day 1 = 7 Okt, Day 2 = 8 Okt**; malam 6 Okt dipakai untuk finalisasi PRD & setup | 6 Okt telah terpakai untuk perencanaan. Deadline 8 Okt tidak berubah. | Active |
 | DEC-019 | Lokasi PRD dipindah dari `.idea/` ke `docs/PRD.md` | `.idea/` adalah folder IDE dan sebagian di-ignore; dokumen proyek harus berada di folder yang di-versioning. | Active |
 | DEC-020 | Waktu disimpan sebagai **epoch millis (UTC)**; tanggal tenggat sebagai **epoch day** (`LocalDate`); tampilan memakai zona waktu perangkat & locale `id-ID` | Menghindari bug zona waktu & DST; tanggal tenggat tidak bergeser. | Active |
 | DEC-021 | Perangkat pengujian utama: **Android Studio Virtual Device (Emulator API 30+)** | Pengujian fungsional dan UI dilakukan via AVD Android Studio; acuan ukuran layar tetap mengacu pada rasio smartphone (baseline ~360×640 dp s/d 1080×2400). | Active |
+| DEC-022 | Strategi cadangan = **ekspor/impor berkas `.tkbackup` oleh pengguna** via Storage Access Framework (opsional terenkripsi AES-256-GCM + PBKDF2); Auto Backup OS tetap mati | Meminimalkan/menghilangkan kebutuhan internet & tanpa login/server, pengguna memegang kendali penuh lokasi penyimpanan cadangan (Google Drive, komputer, flashdisk). | Active |
+| DEC-023 | **Tidak ada login/akun** pada aplikasi Teman Kontrol. Sinkronisasi cloud menjadi proyek terpisah bila diperlukan di masa depan | Menjaga aplikasi tetap offline-first, tanpa biaya server, dan bebas kepatuhan backend UU PDP. | Active |
+| DEC-024 | Lampiran foto & VN disimpan di **app-private storage** (`filesDir/attachments/`), foto dikompres (≤ 1.600 px, JPEG q80) & EXIF lokasi dibuang, suara AAC mono; metadata di Room | Privasi data medis (NFR-014), ukuran cadangan terkendali, tanpa izin penyimpanan publik. | Active |
+| DEC-025 | Notifikasi = **notifikasi lokal terjadwal** (`AlarmManager.setAndAllowWhileIdle`, *inexact*), **bukan** push/FCM, tanpa `SCHEDULE_EXACT_ALARM` | 100% offline tanpa internet; menghindari penolakan default izin exact alarm pada Android 14+. | Active |
+| DEC-026 | Notifikasi **privat secara default**: layar kunci hanya menampilkan teks generik; judul kunjungan tampil hanya bila opsi diaktifkan pengguna | Menjaga privasi agar detail medis tidak terbaca di layar terkunci. | Active |
+| DEC-027 | "Pertanyaan terbuka" ditegakkan dengan **katalog terkurasi (20 template, 5 kategori) + chip pembantu + petunjuk lembut (non-blocking)** + kolom **"Jawaban yang Anda catat"** | Mendorong tenaga kesehatan menjelaskan secara lengkap tanpa memblokir pertanyaan faktual/tertutup yang memang dibutuhkan pengguna. | Active |
+| DEC-028 | **Kunci Aplikasi** memakai `BiometricPrompt` (`BIOMETRIC_STRONG or DEVICE_CREDENTIAL`) + `FLAG_SECURE` opsional; tidak menyimpan PIN sendiri | Menghindari manajemen lupa PIN dan memanfaatkan keamanan kunci layar bawaan Android 11+. | Active |
+| DEC-029 | Skema Room naik bertahap: **v1 (MVP)** → **v2 (jawaban pertanyaan, reminder_log)** → **v3 (attachments)**, wajib `Migration` + `MigrationTestHelper`; destructive migration dilarang | Menjaga integritas data pengguna lama saat update aplikasi (PRD §15.4). | Active |
+| DEC-030 | **Tidak ada batas maksimal jumlah pertanyaan prioritas** (menghapus batas 3 prioritas pada v1.0). *Supersedes FR-008 & C-13 v1.0.* | Sesuai masukan klien agar pengguna bebas menandai sebanyak mungkin pertanyaan penting sebagai prioritas. | Active |
+| DEC-031 | Lampiran Foto & Catatan Suara (VN) ditempatkan **per pertanyaan** (`AttachmentTarget.QUESTION`) dan di **Catatan Tambahan / Hasil Konsultasi** (`AttachmentTarget.ADDITIONAL_NOTE`) | Sesuai masukan klien agar bukti visual/audio melekat langsung pada konteks pertanyaan maupun penjelasan tambahan tenaga medis. | Active |
 
 ---
 
@@ -119,17 +129,23 @@ Istilah ini **wajib** dipakai konsisten di UI, kode, test, dan dokumentasi.
 | Kunjungan | `Consultation` | Satu konsultasi/kontrol ke tenaga kesehatan. |
 | Status kunjungan | `ConsultationStatus` | `SCHEDULED` (Terjadwal), `COMPLETED` (Selesai), `CANCELLED` (Dibatalkan). |
 | Pertanyaan | `Question` | Pertanyaan yang disiapkan pengguna untuk satu kunjungan. |
-| Prioritas | `isPriority` | Penanda pertanyaan terpenting; maksimum 3 per kunjungan. |
+| Prioritas | `isPriority` | Penanda pertanyaan terpenting; **tidak dibatasi jumlahnya** (DEC-030). |
 | Sudah dibahas | `isDiscussed` | Penanda pertanyaan sudah ditanyakan saat konsultasi. |
+| Jawaban yang Anda catat | `Question.answer` | Penjelasan tenaga kesehatan yang dicatat pengguna untuk satu pertanyaan. |
 | Hasil Konsultasi | `ConsultationNote` | Catatan pengguna tentang hasil konsultasi (0 atau 1 per kunjungan). |
 | Tindak Lanjut | `FollowUpAction` | Tindakan yang harus dilakukan setelah konsultasi. |
 | Tenggat | `dueDate` | Tanggal target tindak lanjut (opsional). |
 | Terlambat | `isOverdue` (derived) | Tindak lanjut belum selesai dan `dueDate` < hari ini. |
 | Lewat jadwal | `isPastDue` (derived) | Kunjungan `SCHEDULED` dengan tanggal < hari ini. |
-| Saran pertanyaan | `QuestionSuggestion` | Template pertanyaan generik non-klinis. |
+| Saran pertanyaan | `QuestionSuggestion` | Template pertanyaan **terbuka** generik non-klinis (5 kategori). |
 | Pemberitahuan awal | `FirstLaunchNotice` | Layar batas penggunaan saat pertama kali dibuka. |
+| Cadangan / Pulihkan | `Backup` / `Restore` | Ekspor/impor seluruh data (termasuk lampiran) ke berkas `.tkbackup`. |
+| Pengingat | `Reminder` | Notifikasi lokal terjadwal di perangkat (offline, privat di layar kunci). |
+| Lampiran (Foto / Catatan Suara) | `Attachment` (`PHOTO` / `VOICE`) | Bukti foto & rekaman suara (VN) per pertanyaan (`QUESTION`) atau catatan tambahan (`ADDITIONAL_NOTE`). |
+| Kunci Aplikasi | `AppLock` | Autentikasi biometrik / kunci layar HP sebelum membuka aplikasi. |
+| Mode Konsultasi | `ConsultationMode` | Tampilan fokus satu pertanyaan besar sekaligus saat di ruang konsultasi. |
 
-**Kata terlarang di UI:** "diagnosis", "resep", "rekam medis", "catatan dokter", "rekomendasi pengobatan", "darurat" (kecuali dalam kalimat disclaimer "bukan layanan darurat").
+**Kata terlarang di UI/notifikasi:** "diagnosis", "resep", "rekam medis" (termasuk untuk foto), "catatan dokter", "jawaban dokter", "rekomendasi pengobatan", "dosis", "minum obat sekarang", "darurat" (kecuali dalam kalimat disclaimer "bukan layanan darurat").
 
 ---
 
@@ -156,6 +172,11 @@ Istilah ini **wajib** dipakai konsisten di UI, kode, test, dan dokumentasi.
 | P-02 | Hasil pembicaraan tidak tersimpan terstruktur | Catatan bebas di media berbeda | Sulit meninjau hasil konsultasi |
 | P-03 | Sulit tahu tindakan mana yang belum selesai | Catatan tidak menjadi daftar tindakan | Tindak lanjut terlewat |
 | P-04 | Aplikasi berbasis akun & internet terlalu kompleks | Ketergantungan server | Hambatan pemakaian, risiko privasi |
+| P-05 | Data hilang bila HP rusak/hilang/ganti | Offline, tanpa akun, Auto Backup OS dimatikan | Seluruh riwayat hilang (risiko R-11) |
+| P-06 | Informasi visual/lisan sulit dicatat sebagai teks | Hanya input teks | Detail hasil lab/penjelasan lisan terlewat |
+| P-07 | Pertanyaan tertutup (ya/tidak) menghasilkan jawaban singkat | Saran & kebiasaan menulis pertanyaan | Pasien pulang tanpa pemahaman cukup |
+| P-08 | Aplikasi terasa terlalu sederhana | Fitur v1.0 sengaja minimal | Daya tarik & nilai guna kurang terasa |
+| P-09 | Jadwal kunjungan & tenggat tindak lanjut terlewat | Aplikasi pasif (tanpa pengingat) | Kontrol/tindak lanjut terlewat |
 
 **Problem statement:** Pasien umum dan pendamping membutuhkan cara sederhana untuk mengorganisasi persiapan, hasil, dan tindak lanjut konsultasi pada satu perangkat, karena catatan yang tersebar membuat pertanyaan penting dan tindakan lanjutan terlewat.
 
@@ -194,15 +215,20 @@ Istilah ini **wajib** dipakai konsisten di UI, kode, test, dan dokumentasi.
 | Day-2 Frontend | Loading, empty, error, success states | P0 | 8 Okt |
 | MVP | Persistensi Room + DataStore | P0 | 6 Nov |
 | MVP | CRUD & status kunjungan | P0 | 6 Nov |
-| MVP | Pertanyaan, maks. 3 prioritas, checklist dibahas, cek duplikat | P0 | 6 Nov |
-| MVP | Hasil konsultasi | P0 | 6 Nov |
-| MVP | CRUD tindak lanjut & status selesai | P0 | 6 Nov |
-| MVP | Riwayat + filter status | P1 | 6 Nov |
-| MVP | Saran pertanyaan statis | P1 | 6 Nov |
-| MVP | Standar performa, privasi, aksesibilitas (§11) | P0 | 6 Nov |
-| Post-MVP | Pengingat lokal, ekspor/share, app lock, pencarian riwayat | P2 | — |
-| Post-MVP | Sinkronisasi cloud | P3 | — |
-| Out of scope | Diagnosis/triase/terapi, chat dokter, booking, login/admin, rekam medis resmi, integrasi RS, iOS | — | Tidak dikerjakan |
+| MVP | Pertanyaan, checklist dibahas, cek duplikat (prioritas tidak dibatasi, DEC-030) | P0 | 6 Nov ✅ |
+| MVP | Hasil konsultasi | P0 | 6 Nov ✅ |
+| MVP | CRUD tindak lanjut & status selesai | P0 | 6 Nov ✅ |
+| MVP | Riwayat + filter status | P1 | 6 Nov ✅ |
+| MVP | Saran pertanyaan statis | P1 | 6 Nov ✅ |
+| MVP | Standar performa, privasi, aksesibilitas (§11) | P0 | 6 Nov ✅ |
+| v2.0 (Revisi) | **F-10** Cadangan & Pemulihan `.tkbackup` (opsional AES-256) | P1 | UI ✅ · Engine Next |
+| v2.0 (Revisi) | **F-11** Pertanyaan Terbuka (katalog 20 template, chip awalan, petunjuk lembut, jawaban dicatat, tanpa batas 3 prioritas) | P1 | UI ✅ · Room v2 Next |
+| v2.0 (Revisi) | **F-12** Pengingat & Notifikasi Lokal (kunjungan, siapkan pertanyaan, tindak lanjut, cadangan; privat) | P1 | UI ✅ · Engine Next |
+| v2.0 (Revisi) | **F-13** Lampiran Foto & Catatan Suara (VN) per pertanyaan & di Catatan Tambahan | P1 | UI ✅ · Engine/Room v3 Next |
+| v2.0 (Revisi) | **F-14** Kunci Aplikasi (`BiometricPrompt` + `FLAG_SECURE`) | P1 | UI ✅ · Engine Next |
+| v2.0 (Revisi) | **F-15** Mode Konsultasi · **F-16** Bawa Pertanyaan · **F-17** Ringkasan & Bagikan (Teks/PDF) | P2 | UI ✅ · PDF Engine Next |
+| Backlog | Cadangan otomatis ke folder pilihan (SAF), transkripsi offline, pencarian riwayat (FTS4), sinkronisasi cloud (butuh auth & server terpisah) | P3 | — |
+| Out of scope | Diagnosis/triase/terapi/pengingat dosis obat, chat dokter, booking, login/admin, rekam medis resmi, integrasi RS, ringkasan AI online, iOS | — | Tidak dikerjakan |
 
 ---
 
@@ -222,14 +248,19 @@ Istilah ini **wajib** dipakai konsisten di UI, kode, test, dan dokumentasi.
 | ID | Story | Pri |
 |---|---|---:|
 | US-01 | Sebagai pasien, saya ingin membuat catatan kunjungan agar semua info terkait punya satu konteks. | P0 |
-| US-02 | Sebagai pasien, saya ingin menambah pertanyaan dan menandai maks. 3 sebagai prioritas agar yang terpenting tampil lebih dulu. | P0 |
-| US-03 | Sebagai pasien, saya ingin menandai pertanyaan yang sudah dibahas agar tahu sisanya saat konsultasi. | P0 |
+| US-02 | Sebagai pasien, saya ingin menambah pertanyaan dan menandai pertanyaan penting sebagai prioritas tanpa dibatasi 3 item agar semua hal penting tampil paling atas. | P0 |
+| US-03 | Sebagai pasien, saya ingin menandai pertanyaan yang sudah dibahas dan mencatat jawaban penjelasannya agar tahu sisanya dan tidak lupa hasil diskusi. | P0 |
 | US-04 | Sebagai pasien, saya ingin menyimpan ringkasan hasil konsultasi agar bisa meninjaunya kembali. | P0 |
 | US-05 | Sebagai pasien, saya ingin menambah tindak lanjut dengan tenggat opsional agar tahu langkah berikutnya. | P0 |
 | US-06 | Sebagai pasien, saya ingin menandai tindak lanjut selesai agar progres terlihat. | P0 |
 | US-07 | Sebagai pasien, saya ingin mengedit atau menghapus data agar kesalahan bisa dikoreksi. | P0 |
 | US-08 | Sebagai pasien, saya ingin melihat riwayat kunjungan agar bisa bersiap untuk kunjungan berikutnya. | P1 |
-| US-09 | Sebagai pasien, saya ingin saran pertanyaan agar tidak mulai dari halaman kosong. | P1 |
+| US-09 | Sebagai pasien, saya ingin saran pertanyaan terbuka agar tenaga kesehatan memberi penjelasan lengkap, bukan sekadar ya/tidak. | P1 |
+| US-10 | Sebagai pasien, saya ingin membuat cadangan seluruh data ke berkas `.tkbackup` (opsional kata sandi) dan memulihkannya di HP baru tanpa login agar data aman jika HP rusak. | P1 |
+| US-11 | Sebagai pasien, saya ingin melampirkan foto dan catatan suara (VN) pada masing-masing pertanyaan maupun di Catatan Tambahan agar bukti pemeriksaan dan penjelasan medis tersimpan utuh. | P1 |
+| US-12 | Sebagai pasien, saya ingin diingatkan lewat notifikasi lokal sebelum jadwal kunjungan, tenggat tindak lanjut, dan jadwal cadangan dengan isi tetap privat di layar kunci. | P1 |
+| US-13 | Sebagai pasien, saya ingin mengunci aplikasi dengan sidik jari/kunci layar HP agar foto, rekaman suara, dan catatan saya tetap privat. | P1 |
+| US-14 | Sebagai pasien, saya ingin Mode Konsultasi (tampilan fokus per pertanyaan), fitur Bawa Pertanyaan ke kunjungan berikutnya, dan Ringkasan & Bagikan (teks/PDF). | P2 |
 
 ---
 
@@ -255,25 +286,23 @@ Istilah ini **wajib** dipakai konsisten di UI, kode, test, dan dokumentasi.
 - **Proses:** trim, kolaps whitespace berturut-turut di field satu baris, UUID v4, status awal `SCHEDULED`, `createdAt`/`updatedAt`.
 - **Aturan:** UUID tidak berubah. Tanggal lampau **diizinkan** (mencatat kunjungan yang sudah terjadi) dengan info "Tanggal ini sudah lewat" (bukan error).
 
-### F-03 — Pertanyaan & Checklist
+### F-03 — Pertanyaan, Checklist & Prioritas (Diperbarui DEC-030)
 
-- **Screen:** SCR-04 (daftar & checklist), SCR-05 (form). **Pri:** P0.
-- **Flow:** Detail → "Tambah Pertanyaan" → ketik atau pilih saran → toggle Prioritas → Simpan → kembali ke Detail.
-- **Checklist:** di Detail, setiap pertanyaan memiliki checkbox berlabel "Sudah dibahas"; tap mengubah status langsung.
-- **Urutan tampil:** prioritas dulu, lalu non-prioritas; masing-masing berdasarkan `createdAt` naik. Item yang sudah dibahas **tidak** pindah posisi (mencegah item melompat saat konsultasi), hanya diberi gaya coret + ikon centang.
-- **Ringkasan:** header section menampilkan "x dari y sudah dibahas".
-- **Validasi:** VR-06, VR-07, VR-08.
-- **Aturan:** Total pertanyaan tidak dibatasi. Jika > 15, tampil info C-40. Toggle prioritas di form dinonaktifkan dengan teks penjelasan jika sudah ada 3 prioritas lain (pencegahan di UI) **dan** repository tetap menolak (pertahanan kedua).
-- **Status checkbox:** ditulis ke repository; jika gagal, state dikembalikan dan snackbar C-50 muncul.
+- **Screen:** SCR-04 (daftar & checklist), SCR-05 (form/dialog). **Pri:** P0.
+- **Flow:** Detail → "Kelola Pertanyaan" → "Tambah Pertanyaan" → ketik (atau pakai chip awalan terbuka / pilih saran) → toggle Prioritas (tanpa batas jumlah) → opsional catat jawaban & lampiran Foto/VN → Simpan.
+- **Checklist:** di Detail dan Daftar Pertanyaan, setiap pertanyaan memiliki checkbox "Sudah dibahas"; tap mengubah status langsung (bila belum ada jawaban, muncul snackbar aksi cepat "Catat Jawaban").
+- **Urutan tampil:** prioritas dulu, lalu non-prioritas; masing-masing berdasarkan `createdAt` naik. Item yang sudah dibahas **tidak** pindah posisi.
+- **Validasi:** VR-06, VR-07 (tanpa batas jumlah prioritas), VR-08, VR-13 (jawaban ≤ 1.000 karakter), VR-18 (petunjuk lembut pertanyaan ya/tidak).
+- **Aturan:** Total pertanyaan maupun jumlah pertanyaan prioritas **tidak dibatasi** (DEC-030). Jika > 5 atau > 15, tampil info C-40. Lampiran Foto & VN dapat ditambahkan langsung **per pertanyaan** (DEC-031).
 
-### F-04 — Hasil Konsultasi
+### F-04 — Hasil Konsultasi & Lampiran Penjelasan Tambahan
 
 - **Screen:** SCR-06. **Pri:** P0.
-- **Field:** Ringkasan pembicaraan (`summary`), Arahan dari tenaga kesehatan (`providerInstruction`), Catatan tambahan (`additionalNotes`).
+- **Field:** Ringkasan pembicaraan (`summary`), Arahan dari tenaga kesehatan (`providerInstruction`), Catatan tambahan (`additionalNotes`), serta bagian **Lampiran Penjelasan Tambahan (Foto & VN)** di bawah Catatan Tambahan (DEC-031).
 - **Label section:** "Catatan pengguna" (selalu). Tidak boleh "Catatan dokter".
-- **Proses:** upsert — satu `ConsultationNote` per kunjungan.
+- **Proses:** upsert — satu `ConsultationNote` per kunjungan; lampiran ditautkan dengan `AttachmentTarget.ADDITIONAL_NOTE`.
 - **Validasi:** VR-09, VR-10. Jika ketiga field dikosongkan saat edit catatan yang ada → simpan ditolak dengan C-12; untuk menghapus catatan gunakan menu "Hapus catatan" dengan konfirmasi C-33.
-- **Detail menampilkan:** preview ringkasan maks. 3 baris + "Diperbarui {tanggal waktu}".
+- **Detail menampilkan:** preview ringkasan, arahan, catatan tambahan + badge jumlah Foto/VN lampiran penjelasan tambahan.
 
 ### F-05 — Tindak Lanjut
 
@@ -292,12 +321,12 @@ Istilah ini **wajib** dipakai konsisten di UI, kode, test, dan dokumentasi.
 - **Kartu:** judul, tanggal, fasilitas (bila ada), status chip, label "Lewat jadwal" bila relevan, ringkasan "x/y pertanyaan · z tindak lanjut terbuka".
 - **Empty:** tidak ada data sama sekali → C-60 + CTA "Tambah Kunjungan"; filter tanpa hasil → C-61 + tombol "Tampilkan semua".
 
-### F-07 — Saran Pertanyaan Statis
+### F-07 — Saran Pertanyaan Terbuka Statis
 
 - **Screen:** SCR-05. **Pri:** P1.
-- **Kategori:** Gejala, Pemeriksaan, Perawatan, Langkah Berikutnya (masing-masing 4–6 template; isi final di §14.4).
-- **Perilaku:** tap saran → teks disalin ke field (menimpa isi kosong; jika field berisi, minta konfirmasi "Ganti teks?") → tetap bisa diedit → hanya tersimpan saat Simpan.
-- **Data:** konstanta Kotlin (DEC-012). Tidak pernah gagal dimuat.
+- **Kategori (5 kategori, 20 template terbuka):** Gejala, Pemeriksaan, Perawatan, Langkah Berikutnya, dan **Pemahaman** (pola *Ask Me 3* & *teach-back*). Seluruh template wajib lolos aturan pertanyaan terbuka (§14.4).
+- **Perilaku:** tap saran → teks disalin ke field → tetap bisa diedit → tersimpan saat Simpan.
+- **Data:** konstanta Kotlin (`StaticSuggestionCatalog`, DEC-012). Tidak pernah gagal dimuat.
 
 ### F-08 — Beranda
 
@@ -311,8 +340,59 @@ Istilah ini **wajib** dipakai konsisten di UI, kode, test, dan dokumentasi.
 ### F-09 — Tentang
 
 - **Screen:** SCR-09. **Pri:** P1.
-- **Isi:** deskripsi singkat, batas penggunaan (buka ulang SCR-01), penjelasan data (C-70), versi aplikasi (`BuildConfig.VERSION_NAME`).
-- **Debug only:** section "Developer" (hanya `BuildConfig.DEBUG`) untuk memilih skenario mock: Normal, Kosong, Error, Lambat (delay 1500 ms). Dipakai untuk demo state Day-2 dan UI test.
+- **Isi:** deskripsi singkat, pintasan ke Cadangan & Pemulihan (SCR-11), Pengingat (SCR-12), Pengaturan & Kunci Aplikasi (SCR-10), batas penggunaan (buka ulang SCR-01), penjelasan data (C-70), versi aplikasi (`BuildConfig.VERSION_NAME`).
+- **Debug only:** section "Developer" (hanya `BuildConfig.DEBUG`) untuk memilih skenario mock: Normal, Kosong, Error, Lambat (delay 1500 ms).
+
+### F-10 — Cadangan & Pemulihan (`.tkbackup`)
+
+- **Screen:** SCR-10 (Pengaturan), SCR-11 (Cadangan & Pemulihan). **Pri:** P1.
+- **Tujuan:** Memungkinkan pemulihan seluruh data (termasuk jawaban & lampiran foto/VN) jika HP rusak/hilang/ganti **tanpa login dan tanpa izin internet** (DEC-022, DEC-023).
+- **Flow ekspor:** Ringkasan jumlah data & ukuran → opsi enkripsi kata sandi **AES-256-GCM + PBKDF2WithHmacSHA256** (≥ 600.000 iterasi, VR-17) → `ACTION_CREATE_DOCUMENT` (`TemanKontrol-AAAA-BB-HH.tkbackup`) → tulis ZIP (`manifest.json` + `data.json` + `attachments/*`) → simpan `last_backup_at` + peringatan C-82 bila tersimpan di memori lokal HP.
+- **Flow pemulihan:** `ACTION_OPEN_DOCUMENT` → kata sandi bila terenkripsi (maks. 5 percobaan, jeda 30 dtk) → validasi versi format & SHA-256 sebelum menulis → pratinjau isi → dialog konfirmasi ganti data (C-84) → transaksi atomik + *staging* lampiran → kembali ke Beranda.
+
+### F-11 — Pertanyaan Terbuka, Pembantu Penulisan & Jawaban
+
+- **Screen:** SCR-05, SCR-04, SCR-16. **Pri:** P1.
+- **Komponen:**
+  1. **Chip awalan terbuka:** `Apa…`, `Mengapa…`, `Bagaimana…`, `Jelaskan…`, `Apa saja…`.
+  2. **Petunjuk lembut (VR-18, DEC-027):** Mendeteksi kalimat berpotensi ya/tidak (`apakah`, `bolehkah`, `bisakah`, dll.) dan menampilkan info C-81 non-blocking dengan tombol *Tetap Gunakan*.
+  3. **Jawaban yang Anda catat (`Question.answer`):** Field opsional ≤ 1.000 karakter (VR-13) per pertanyaan + timestamp `answerUpdatedAt`.
+
+### F-12 — Pengingat & Notifikasi Lokal
+
+- **Screen:** SCR-12 (Pengingat & Notifikasi). **Pri:** P1.
+- **Prinsip:** 100% lokal (`AlarmManager.setAndAllowWhileIdle`, tanpa FCM/internet, DEC-025).
+- **4 jenis pengingat:** (1) Kunjungan (H-1 jam pilihan default 19.00 & 2 jam sebelum), (2) Siapkan pertanyaan (H-2 jam 19.00 bila pertanyaan = 0), (3) Tenggat tindak lanjut (hari-H default 08.00 & sekali H+1), (4) Cadangan berkala (setiap 30 hari bila ada perubahan).
+- **Privasi (DEC-026):** Default generik (`VISIBILITY_PRIVATE`) tanpa detail medis di layar kunci; opsi "Tampilkan judul kunjungan" mati secara default. Live preview tersedia di SCR-12.
+- **Ketahanan:** Jadwal ulang otomatis saat CRUD, reboot (`RECEIVE_BOOT_COMPLETED`), ganti zona waktu, update aplikasi, dan pemulihan; deduplikasi via `reminder_log`; panduan baterai OEM/MIUI (FR-046).
+
+### F-13 — Lampiran Foto & Catatan Suara (VN)
+
+- **Screen:** SCR-05 (per pertanyaan), SCR-06 (Catatan Tambahan), SCR-04 (Detail), SCR-13 (Penampil Foto), SCR-14 (Perekam VN). **Pri:** P1.
+- **Penempatan (DEC-031):** Terhubung langsung **per pertanyaan** (`AttachmentTarget.QUESTION`) dan di bagian **Catatan Tambahan / Hasil Konsultasi** (`AttachmentTarget.ADDITIONAL_NOTE`).
+- **Foto:** Kamera (`TakePicture` via `FileProvider` non-exported) & Galeri (`PickVisualMedia`) tanpa izin `CAMERA`/storage; kompres JPEG q80 sisi terpanjang ≤ 1.600 px; EXIF lokasi dibuang; peringatan privasi C-87.
+- **Catatan Suara (VN):** Rekam AAC mono (`MediaRecorder`, maks. 10 menit VR-15) dengan pengingat persetujuan percakapan C-88; auto-stop & simpan saat app ke background/telepon masuk; putar dengan `MediaPlayer` (1x / 1,5x / 2x).
+- **Integritas & Batas:** Maks. 10 foto + 5 VN per kunjungan (VR-16), cek ruang kosong ≥ 50 MB (C-89). Hapus pertanyaan/kunjungan/lampiran menghapus file fisik di `filesDir/attachments/` + pembersih yatim piatu saat startup.
+
+### F-14 — Kunci Aplikasi
+
+- **Screen:** SCR-10 (Pengaturan), SCR-15 (Layar Kunci). **Pri:** P1.
+- **Perilaku:** `BiometricPrompt` (`BIOMETRIC_STRONG or DEVICE_CREDENTIAL`, DEC-028) saat buka app atau setelah timeout di background (`Langsung` / `1 menit` / `5 menit`). Opsi `FLAG_SECURE` menyembunyikan layar dari *recent apps* & tangkapan layar. Auto-nonaktif bila kunci layar HP dihapus.
+
+### F-15 — Mode Konsultasi
+
+- **Screen:** SCR-16. **Pri:** P2.
+- **Perilaku:** Tampilan fokus satu pertanyaan per layar dengan teks ≥ 24 sp, layar tetap menyala (`FLAG_KEEP_SCREEN_ON`), progress bar (`x dari y`), satu tap "Sudah Dibahas", kolom "Jawaban yang Anda catat", tombol cepat "+ Foto" & "+ VN" untuk pertanyaan aktif, navigasi Sebelumnya/Berikutnya, serta layar ringkasan akhir ("Isi Hasil Konsultasi" / "Tandai Selesai").
+
+### F-16 — Bawa Pertanyaan ke Kunjungan Berikutnya
+
+- **Screen:** Dialog di SCR-04. **Pri:** P2.
+- **Perilaku:** Dipicu saat kunjungan ditandai **Selesai** (jika masih ada pertanyaan belum dibahas) atau dari menu `⋮`. Memilih pertanyaan untuk disalin (UUID baru, `isDiscussed = false`, `answer = null`) ke kunjungan `SCHEDULED` lain atau membuat kunjungan baru; menolak duplikat secara atomik dan melaporkan jumlah disalin/dilewati.
+
+### F-17 — Ringkasan & Bagikan
+
+- **Screen:** SCR-17. **Pri:** P2.
+- **Perilaku:** Pratinjau ala halaman A4 dengan toggle bagian (Tenaga Kesehatan, Pertanyaan & Jawaban, Hasil Konsultasi, Tindak Lanjut) dan disclaimer *"Dibuat oleh pengguna dengan Teman Kontrol. Bukan dokumen medis resmi."* Dapat dibagikan sebagai **Teks** (`ACTION_SEND`) atau **PDF** (`android.graphics.pdf.PdfDocument` via `FileProvider`).
 
 ---
 
@@ -327,7 +407,7 @@ Istilah ini **wajib** dipakai konsisten di UI, kode, test, dan dokumentasi.
 | FR-005 | Menghapus kunjungan beserta seluruh child data secara atomik setelah konfirmasi. | P0 | Day-2 (mock) / MVP | F-02 |
 | FR-006 | Mengubah status kunjungan secara bebas antar 3 status. | P0 | Day-2/MVP | F-02 |
 | FR-007 | CRUD pertanyaan. | P0 | Day-2/MVP | F-03 |
-| FR-008 | Membatasi maks. 3 pertanyaan prioritas per kunjungan (UI + repository). | P0 | Day-2/MVP | F-03 |
+| FR-008 | *(Superseded by DEC-030)* Pertanyaan prioritas **tidak dibatasi** jumlahnya (sebelumnya maks. 3 pada v1.0). | P0 | v1.0 → v2.0 | F-03 |
 | FR-009 | Menolak pertanyaan duplikat (setelah normalisasi) dalam kunjungan yang sama. | P1 | Day-2/MVP | F-03 |
 | FR-010 | Menandai pertanyaan sudah/belum dibahas. | P0 | Day-2/MVP | F-03 |
 | FR-011 | Upsert & hapus catatan hasil konsultasi. | P0 | Day-2/MVP | F-04 |
@@ -345,6 +425,40 @@ Istilah ini **wajib** dipakai konsisten di UI, kode, test, dan dokumentasi.
 | FR-023 | Draft form bertahan saat rotasi, pindah aplikasi, dan process death. | P1 | MVP | Semua form |
 | FR-024 | Detail menampilkan "Kunjungan tidak ditemukan" + tombol kembali bila ID tidak ada (mis. terhapus). | P0 | Day-2/MVP | F-02 |
 | FR-025 | Menampilkan label "Lewat jadwal" untuk kunjungan Terjadwal bertanggal lampau dan "Terlambat" untuk tindak lanjut lewat tenggat. | P1 | Day-2/MVP | F-02, F-05 |
+| FR-026 | Mengekspor seluruh data (termasuk lampiran) ke berkas `.tkbackup` via SAF tanpa izin penyimpanan/internet. | P1 | v2.0 (UI ✅) | F-10 |
+| FR-027 | Opsi enkripsi berkas `.tkbackup` dengan kata sandi (PBKDF2 + AES-256-GCM); kata sandi tidak disimpan. | P1 | v2.0 (UI ✅) | F-10 |
+| FR-028 | Memulihkan data dari `.tkbackup`: validasi checksum & versi → pratinjau → konfirmasi ganti → transaksi atomik. | P1 | v2.0 (UI ✅) | F-10 |
+| FR-029 | Menampilkan "Terakhir dicadangkan" dan memberi peringatan bila berkas tersimpan di memori lokal HP. | P1 | v2.0 (UI ✅) | F-10 |
+| FR-030 | Membagikan berkas cadangan via share sheet setelah ekspor (opsional). | P2 | v2.0 | F-10 |
+| FR-031 | Ekspor/pemulihan mendukung progres, pembatalan, dan pemulihan aman bila gagal. | P1 | v2.0 (UI ✅) | F-10 |
+| FR-033 | Katalog saran 100% pertanyaan terbuka (20 template, 5 kategori termasuk Pemahaman). | P1 | v2.0 (✅) | F-11 |
+| FR-034 | Chip pembantu awalan pertanyaan terbuka (`Apa`/`Mengapa`/`Bagaimana`/`Jelaskan`/`Apa saja`). | P1 | v2.0 (✅) | F-11 |
+| FR-035 | Petunjuk lembut (non-blocking) untuk pertanyaan yang cenderung ya/tidak. | P1 | v2.0 (✅) | F-11 |
+| FR-036 | Kolom "Jawaban yang Anda catat" per pertanyaan (≤ 1.000 karakter) + aksi cepat snackbar. | P1 | v2.0 (UI ✅) | F-11 |
+| FR-037 | Lampiran Foto & VN dapat ditambahkan **per pertanyaan** (`AttachmentTarget.QUESTION`). | P1 | v2.0 (UI ✅) | F-11, F-13 |
+| FR-038 | Pengingat kunjungan lokal (H-1 jam pilihan & 2 jam sebelum). | P1 | v2.0 (UI ✅) | F-12 |
+| FR-039 | Pengingat siapkan pertanyaan lokal (H-2 bila pertanyaan = 0). | P2 | v2.0 (UI ✅) | F-12 |
+| FR-040 | Pengingat tenggat tindak lanjut lokal (hari-H jam pilihan & sekali H+1). | P1 | v2.0 (UI ✅) | F-12 |
+| FR-041 | Pengingat cadangan berkala lokal (setiap 30 hari bila ada perubahan data). | P1 | v2.0 (UI ✅) | F-12 |
+| FR-042 | Notifikasi privat di layar kunci secara default; opsi tampilkan judul kunjungan. | P1 | v2.0 (UI ✅) | F-12 |
+| FR-043 | Tap notifikasi membuka layar terkait lewat deep link type-safe. | P1 | v2.0 | F-12 |
+| FR-044 | Penjadwalan ulang otomatis saat CRUD, reboot, ganti zona waktu, update app, atau pemulihan. | P1 | v2.0 | F-12 |
+| FR-045 | Izin `POST_NOTIFICATIONS` diminta kontekstual; penolakan tidak memblokir aplikasi. | P1 | v2.0 (UI ✅) | F-12 |
+| FR-046 | Panduan pengaturan baterai OEM/MIUI pada SCR-12. | P2 | v2.0 (UI ✅) | F-12 |
+| FR-047 | Menambah foto dari kamera (`TakePicture`) dan galeri (`PickVisualMedia`) tanpa izin kamera/penyimpanan. | P1 | v2.0 (UI ✅) | F-13 |
+| FR-048 | Foto dikompres (≤ 1.600 px, JPEG q80), EXIF lokasi dibuang, dan disimpan di app-private storage. | P1 | v2.0 | F-13 |
+| FR-049 | Merekam (maks. 10 menit) & memutar catatan suara (1x/1,5x/2x) per pertanyaan & catatan tambahan. | P1 | v2.0 (UI ✅) | F-13 |
+| FR-050 | Rekaman suara otomatis berhenti & tersimpan saat aplikasi ke background/telepon masuk. | P1 | v2.0 | F-13 |
+| FR-051 | Lampiran Foto & VN tersedia di **per pertanyaan** dan **Catatan Tambahan / Hasil Konsultasi**. | P1 | v2.0 (UI ✅) | F-13 |
+| FR-052 | Batas 10 foto + 5 VN per kunjungan; cek ruang kosong ≥ 50 MB. | P1 | v2.0 | F-13 |
+| FR-053 | Hapus pertanyaan/kunjungan/lampiran menghapus file fisik; pembersih yatim piatu saat start. | P1 | v2.0 | F-13 |
+| FR-054 | Peringatan privasi foto (C-87) & pengingat persetujuan percakapan sebelum rekam (C-88). | P1 | v2.0 (UI ✅) | F-13 |
+| FR-055 | Cadangan & pemulihan `.tkbackup` menyertakan seluruh lampiran foto & VN. | P1 | v2.0 | F-13, F-10 |
+| FR-056 | Penanganan aman saat lampiran hilang/rusak, izin ditolak, atau ruang penuh. | P1 | v2.0 | F-13 |
+| FR-057 | Kunci Aplikasi via `BiometricPrompt` + kunci layar perangkat + opsi `FLAG_SECURE`. | P1 | v2.0 (UI ✅) | F-14 |
+| FR-058 | Mode Konsultasi (fokus satu pertanyaan besar, keep screen on, catat jawaban, lampiran per pertanyaan). | P2 | v2.0 (UI ✅) | F-15 |
+| FR-059 | Membawa pertanyaan belum dibahas ke kunjungan berikutnya (salin, dedupe, atomik). | P2 | v2.0 (UI ✅) | F-16 |
+| FR-060 | Ringkasan kunjungan (Teks & PDF) dengan pratinjau toggle bagian & share sheet. | P2 | v2.0 (UI ✅) | F-17 |
 
 ---
 
@@ -380,7 +494,7 @@ Semua angka diukur pada **Redmi Note 10S, release build (R8 aktif), dataset uji 
 7. **Index:** sesuai §15.3.
 8. **Flow:** gunakan `distinctUntilChanged()` pada flow yang di-combine; jangan membuat flow baru di dalam composable.
 9. **Tanpa reflection-heavy library**, tanpa Gson; serialisasi (hanya untuk route) memakai kotlinx.serialization.
-10. **Gambar:** hanya vector drawable; tanpa bitmap besar; tanpa library image loading.
+10. **Gambar:** ikon memakai Material Icons + vector drawable; untuk **lampiran foto pengguna** (F-13), dekode bitmap memakai `ImageDecoder` + *downsample* di `Dispatchers.IO` tanpa library image-loading eksternal.
 11. **Splash:** `androidx.core:core-splashscreen` dengan `setKeepOnScreenCondition` sampai start destination diketahui — mencegah kedipan layar notice → beranda.
 12. **Release:** `isMinifyEnabled = true`, `isShrinkResources = true`, R8 full mode (default AGP).
 13. **Logging:** `android.util.Log` dibungkus `AppLogger`; panggilan `Log.v/d/i` dihapus di release dengan aturan R8 `-assumenosideeffects`.
@@ -404,15 +518,15 @@ Semua angka diukur pada **Redmi Note 10S, release build (R8 aktif), dataset uji 
 
 | ID | Requirement |
 |---|---|
-| NFR-013 | Tidak ada field wajib berisi nama lengkap, NIK, nomor BPJS, diagnosis, atau foto dokumen. |
-| NFR-014 | Data di app-private storage saja; `allowBackup="false"`; `data_extraction_rules.xml` mengecualikan semua domain untuk cloud-backup dan device-transfer (DEC-006). |
+| NFR-013 | Tidak ada field wajib berisi nama lengkap, NIK, nomor BPJS, atau diagnosis; lampiran foto bersifat opsional (disertai peringatan privasi C-87). |
+| NFR-014 | Data di app-private storage saja; `allowBackup="false"`; `data_extraction_rules.xml` mengecualikan semua domain untuk cloud-backup dan device-transfer (DEC-006); data hanya keluar via ekspor/bagikan eksplisit pengguna (DEC-022). |
 | NFR-015 | Tidak ada secret/credential di kode; keystore release tidak di-commit. |
 | NFR-016 | Hapus menghapus record dan relasinya dari database (bukan soft delete). |
 | NFR-017 | Log hanya berisi ID teknis & kategori error, **tidak pernah** isi teks pengguna. |
 | NFR-018 | Mengikuti prinsip MASVS-STORAGE & MASVS-PRIVACY [REF-05]. |
 | NFR-034 | Manifest final tidak mengandung izin `INTERNET` / `ACCESS_NETWORK_STATE` (dicek di merged manifest) (DEC-011). |
 | NFR-035 | Tidak ada analytics, crash reporter, atau SDK pihak ketiga yang mengirim data. |
-| NFR-036 | Hanya `MainActivity` yang `exported`; tidak ada ContentProvider publik. |
+| NFR-036 | Hanya `MainActivity` yang `exported`; tidak ada ContentProvider yang diekspor (`FileProvider` hanya `exported="false"` dengan izin URI sementara untuk kamera & share PDF). |
 
 ### 11.5 Kompatibilitas & Ketahanan
 
@@ -427,38 +541,69 @@ Semua angka diukur pada **Redmi Note 10S, release build (R8 aktif), dataset uji 
 | NFR-038 | Predictive back didukung; dialog unsaved-change memakai `BackHandler` sehingga tetap bekerja dengan gesture back. |
 | NFR-039 | Mendukung tema terang & gelap mengikuti sistem (DEC-008). |
 
+### 11.6 Non-Functional Requirements Revisi v2.0
+
+| ID | Requirement | Target | Cara ukur |
+|---|---|---|---|
+| NFR-040 | Waktu & memori ekspor/pemulihan `.tkbackup` | D-100 tanpa lampiran ≤ 5 dtk; dengan 100 MB lampiran ≤ 30 dtk; PSS tambahan ≤ 50 MB (streaming) | Log durasi + `dumpsys meminfo` |
+| NFR-041 | Integritas cadangan | Checksum SHA-256 divalidasi sebelum pemulihan; pemulihan atomik (rollback penuh bila gagal) | TC-027, TC-028 |
+| NFR-042 | Kriptografi cadangan | PBKDF2WithHmacSHA256 ≥ 600.000 iterasi, salt 16 B; AES-256-GCM, IV unik; hanya API JCA bawaan | Review + unit test vektor |
+| NFR-043 | Data lampiran & cadangan hanya keluar perangkat atas aksi eksplisit pengguna | 0 jalur otomatis keluar | Audit manifest (tanpa `INTERNET`) |
+| NFR-044 | Foto lampiran | Rata-rata ≤ 500 KB; dekode *thumbnail* ≤ 100 ms; 0 OOM saat 10 foto | TC-032 |
+| NFR-045 | Ketepatan pengingat | ≥ 95% dalam ±15 menit pada Redmi Note 10S (baterai default) | TC-035 |
+| NFR-046 | Notifikasi privat | Layar kunci tidak pernah menampilkan judul/isi pengguna secara default | TC-036 |
+| NFR-047 | Anggaran ukuran APK release | Tetap ≤ 10 MB (saat ini 6,81 MiB) | `assembleRelease` |
+| NFR-048 | Aksesibilitas fitur baru | Target sentuh ≥ 48 dp; perekam & Mode Konsultasi mendukung TalkBack; kontras ≥ 4,5:1 | TC-037 |
+| NFR-049 | Migrasi skema Room | Setiap kenaikan versi (v1→v2→v3) punya `Migration` + `MigrationTestHelper`; destructive migration dilarang | TC-026 |
+| NFR-050 | Tidak ada I/O/kripto/dekode media di *main thread* | 0 pelanggaran StrictMode | StrictMode debug |
+| NFR-051 | Ketahanan waktu pengingat | Jadwal akurat setelah reboot, ganti zona waktu, dan update app | TC-035 |
+| NFR-052 | Mode Konsultasi | Teks pertanyaan ≥ 24 sp; tidak terpotong pada font scale 2,0 | TC-018 diperluas |
+
 ---
 
 ## 12. Information Architecture & Navigation
 
 ```text
 Splash (sistem)
+└── [AppLock aktif] → SCR-15 Layar Kunci (BiometricPrompt)
 └── [noticeAccepted == false] → SCR-01 Pemberitahuan Awal
 └── Main Shell (Bottom Navigation)
-    ├── SCR-02 Beranda
+    ├── SCR-02 Beranda (TopBar → SCR-10 Pengaturan)
     │   ├── SCR-03 Form Kunjungan (buat)
     │   └── SCR-04 Detail Kunjungan
     │       ├── SCR-03 Form Kunjungan (edit)
-    │       ├── SCR-05 Form Pertanyaan (tambah/edit)
-    │       ├── SCR-06 Hasil Konsultasi
-    │       └── SCR-07 Form Tindak Lanjut (tambah/edit)
+    │       ├── SCR-05 Daftar & Form Pertanyaan (+ Jawaban, Foto/VN per pertanyaan)
+    │       ├── SCR-06 Hasil Konsultasi (+ Foto/VN Catatan Tambahan)
+    │       ├── SCR-07 Form Tindak Lanjut (tambah/edit)
+    │       ├── SCR-16 Mode Konsultasi (fokus saat kontrol)
+    │       └── SCR-17 Ringkasan & Bagikan (Teks / PDF)
     ├── SCR-08 Riwayat → SCR-04
-    └── SCR-09 Tentang → SCR-01 (mode baca)
+    └── SCR-09 Tentang
+        ├── SCR-01 (mode baca)
+        ├── SCR-10 Pengaturan
+        │   ├── SCR-11 Cadangan & Pemulihan (.tkbackup)
+        │   └── SCR-12 Pengingat & Notifikasi Lokal
+        └── SCR-13 Penampil Foto / SCR-14 Perekam Suara (modal/sheet di SCR-05, SCR-06, SCR-16)
 ```
 
 ### 12.1 Route (type-safe, DEC-016)
 
 | Route (Kotlin) | Argumen | Screen | Bottom bar tampil? |
 |---|---|---|---|
-| `NoticeRoute` | `readOnly: Boolean = false` | SCR-01 | Tidak |
+| `NoticeRoute` | — | SCR-01 | Tidak |
 | `HomeRoute` | — | SCR-02 | Ya |
-| `HistoryRoute` | `initialFilter: StatusFilter = ALL` | SCR-08 | Ya |
+| `HistoryRoute` | — | SCR-08 | Ya |
 | `AboutRoute` | — | SCR-09 | Ya |
-| `ConsultationFormRoute` | `consultationId: String? = null` | SCR-03 | Tidak |
-| `ConsultationDetailRoute` | `consultationId: String` | SCR-04 | Tidak |
-| `QuestionFormRoute` | `consultationId: String, questionId: String? = null` | SCR-05 | Tidak |
-| `NoteFormRoute` | `consultationId: String` | SCR-06 | Tidak |
-| `FollowUpFormRoute` | `consultationId: String, actionId: String? = null` | SCR-07 | Tidak |
+| `SettingsRoute` | — | SCR-10 | Tidak |
+| `BackupRoute` | — | SCR-11 | Tidak |
+| `ReminderSettingsRoute` | — | SCR-12 | Tidak |
+| `ConsultationFormRoute` | `id: String? = null` | SCR-03 | Tidak |
+| `ConsultationDetailRoute` | `id: String` | SCR-04 | Tidak |
+| `QuestionRoute` | `consultationId: String` | SCR-05 | Tidak |
+| `NoteRoute` | `consultationId: String` | SCR-06 | Tidak |
+| `FollowUpRoute` | `consultationId: String` | SCR-07 | Tidak |
+| `ConsultationModeRoute` | `consultationId: String` | SCR-16 | Tidak |
+| `SummaryPreviewRoute` | `consultationId: String` | SCR-17 | Tidak |
 
 **Aturan navigasi:**
 
@@ -478,12 +623,20 @@ Setiap layar list/detail memiliki state: **Loading** (indikator muncul hanya jik
 | SCR-01 | Pemberitahuan Awal | Ikon app, judul, 3 poin batas (C-01), tombol utama | Saya Mengerti / Tutup | — |
 | SCR-02 | Beranda | TopAppBar "Teman Kontrol", section F-08, ExtendedFAB | Buka detail, centang tindak lanjut, tambah | Empty total (C-62) |
 | SCR-03 | Form Kunjungan | Field: Judul*, Tanggal*, Jam*, Alasan kunjungan*, Fasilitas, Nama tenaga kesehatan; tombol Simpan di bawah (sticky di atas keyboard) | Simpan, Back | Info tanggal lampau; unsaved dialog |
-| SCR-04 | Detail Kunjungan | Header (judul, tanggal, fasilitas, nakes, alasan), kontrol status, section **Persiapan Pertanyaan** → **Hasil Konsultasi** → **Tindak Lanjut**, menu ⋮ (Edit, Hapus) | Semua aksi child | Not found (FR-024); loading per section tidak mengganti seluruh layar |
-| SCR-05 | Form Pertanyaan | Field pertanyaan (multiline, counter), switch Prioritas + teks bantuan, daftar saran per kategori (chips) | Simpan, Hapus (mode edit), Back | Limit prioritas; duplikat |
-| SCR-06 | Hasil Konsultasi | 3 field multiline + counter, label "Catatan pengguna" | Simpan, Hapus catatan (bila ada), Back | Semua kosong |
+| SCR-04 | Detail Kunjungan | Header, tombol **Mulai Mode Konsultasi**, section **Persiapan Pertanyaan** (dengan jawaban & badge lampiran) → **Hasil Konsultasi** (+ badge lampiran tambahan) → **Tindak Lanjut**, menu ⋮ (Ringkasan & Bagikan, Bawa Pertanyaan, Status, Edit, Hapus) | Semua aksi child & bawa pertanyaan | Not found (FR-024); dialog C-30/C-31/F-16 |
+| SCR-05 | Daftar & Form Pertanyaan | Daftar prioritas atas, checklist dibahas, preview jawaban & lampiran Foto/VN per pertanyaan; dialog tambah/edit dengan chip awalan terbuka, petunjuk lembut ya/tidak, switch Prioritas (tanpa batas jumlah), kolom jawaban, lampiran Foto/VN, sheet katalog terbuka | Tambah/edit/hapus, lampir Foto/VN, catat jawaban | Petunjuk VR-18; duplikat |
+| SCR-06 | Hasil Konsultasi | 3 field multiline + counter, label "Catatan pengguna", section **Lampiran Penjelasan Tambahan (Foto & VN)** | Simpan, tambah/putar/hapus Foto & VN, Hapus catatan, Back | Semua kosong |
 | SCR-07 | Form Tindak Lanjut | Field tindakan, pemilih tanggal tenggat (opsional, bisa dihapus) | Simpan, Hapus (mode edit), Back | Peringatan tenggat lampau |
 | SCR-08 | Riwayat | Filter chips, LazyColumn kartu | Buka detail | Empty total vs empty filter |
-| SCR-09 | Tentang | Deskripsi, batas penggunaan, data & privasi, versi, [Developer – debug only] | Buka SCR-01 | — |
+| SCR-09 | Tentang | Deskripsi, pintasan Pengaturan/Cadangan/Pengingat, batas penggunaan, data & privasi, versi, [Developer – debug only] | Buka SCR-01, SCR-10/11/12 | — |
+| SCR-10 | Pengaturan | Kartu navigasi ke Cadangan & Pengingat, toggle Kunci Aplikasi, pilihan timeout, toggle `FLAG_SECURE`, Pratinjau Layar Kunci | Buka SCR-11, SCR-12, SCR-15 | Tanpa kunci layar HP |
+| SCR-11 | Cadangan & Pemulihan | Ringkasan data, toggle enkripsi AES-256 + sandi, tombol Buat Cadangan (SAF), Pulihkan dari Berkas + pratinjau + konfirmasi ganti data | Ekspor, Pulihkan | Progres, peringatan lokasi lokal, password salah |
+| SCR-12 | Pengingat & Notifikasi | Banner izin & panduan baterai OEM, toggle & jam 4 jenis pengingat, toggle privasi layar kunci + **Pratinjau Notifikasi** | Ubah setelan, buka Pengaturan HP | Izin ditolak (non-blocking) |
+| SCR-13 | Penampil Foto | Modal pratinjau foto, field edit keterangan (≤ 100), tombol hapus | Simpan keterangan, Hapus | Placeholder file rusak |
+| SCR-14 | Perekam Suara (VN) | Bottom sheet: pengingat persetujuan (C-88), animasi rekam, timer (maks. 10 menit), keterangan, Simpan/Batal | Rekam, Jeda, Simpan | Auto-stop saat background |
+| SCR-15 | Layar Kunci | Overlay/layar biometrik & kunci layar HP | Buka Kunci | Autentikasi dibatalkan |
+| SCR-16 | Mode Konsultasi | Progress bar, teks pertanyaan ≥ 24 sp, Priority badge, toggle Sudah Dibahas, kolom jawaban inline, lampiran Foto/VN per pertanyaan, Sebelumnya/Berikutnya | Navigasi, catat jawaban/VN/foto, selesai | Layar tetap menyala; ringkasan akhir |
+| SCR-17 | Ringkasan & Bagikan | Toggle bagian, kartu pratinjau format A4 + disclaimer, Bagikan Teks & Bagikan PDF | Bagikan | — |
 
 **Catatan perangkat (Redmi Note 10S, 6.43", 1080×2400):** uji keyboard terbuka di semua form, font besar, mode gelap, dan airplane mode di perangkat fisik — bukan emulator saja.
 
@@ -521,7 +674,7 @@ Semua pasangan warna wajib memenuhi NFR-031.
 **Shape:** kartu 16 dp; tombol & chip mengikuti default M3; dialog 28 dp.
 
 **Komponen reusable (wajib dipakai, dilarang duplikasi ad-hoc):**
-`AppScaffold`, `AppTopBar`, `StateView` (loading/empty/error), `ConsultationCard`, `SectionCard`, `LabeledTextField` (dengan counter & error), `DateField`, `TimeField`, `StatusChip`, `PriorityBadge`, `ChecklistItem`, `PrimaryButton` (dengan state loading), `ConfirmDialog`, `UnsavedChangesDialog`.
+`AppScaffold`, `AppTopBar`, `StateView` (loading/empty/error), `ConsultationCard`, `SectionCard`, `LabeledTextField` (dengan counter & error), `DateField`, `TimeField`, `StatusChip`, `PriorityBadge`, `ChecklistItem`, `PrimaryButton`, `ConfirmDialog`, `UnsavedChangesDialog`, `AttachmentSection`, `CompactAttachmentBadges`, `PhotoViewerDialog`, `VoiceRecorderBottomSheet`.
 
 ### 14.3 Microcopy (SSOT teks UI)
 
@@ -533,7 +686,7 @@ Semua string berada di `res/values/strings.xml` (tidak di-hardcode) dengan key s
 | C-10 | Field wajib kosong | "{Nama field} wajib diisi." |
 | C-11 | Terlalu panjang | "{Nama field} maksimal {n} karakter." |
 | C-12 | Catatan kosong | "Isi minimal satu bagian catatan sebelum menyimpan." |
-| C-13 | Prioritas penuh | "Maksimal 3 pertanyaan prioritas. Hapus tanda prioritas pada pertanyaan lain terlebih dahulu." |
+| C-13 | *(Superseded by DEC-030)* | *(Dihapus karena batas 3 prioritas ditiadakan)* |
 | C-14 | Duplikat | "Pertanyaan ini sudah ada di kunjungan ini." |
 | C-15 | Tanggal tidak valid | "Pilih tanggal yang valid." |
 | C-20 | Kunjungan dibuat | "Kunjungan disimpan." |
@@ -545,7 +698,7 @@ Semua string berada di `res/values/strings.xml` (tidak di-hardcode) dengan key s
 | C-32 | Hapus pertanyaan/tindak lanjut | "Hapus {pertanyaan/tindak lanjut} ini?" Tombol "Hapus" / "Batal" |
 | C-33 | Hapus catatan | "Hapus catatan hasil konsultasi?" Tombol "Hapus" / "Batal" |
 | C-34 | Unsaved | Judul "Buang perubahan?" Isi "Perubahan yang belum disimpan akan hilang." Tombol "Buang" / "Tetap di sini" |
-| C-40 | Daftar panjang | "Daftar pertanyaan cukup panjang. Pastikan 3 pertanyaan terpenting ditandai prioritas." |
+| C-40 | Daftar panjang | "Daftar pertanyaan cukup panjang. Tandai pertanyaan terpenting sebagai prioritas agar tampil paling atas." |
 | C-41 | Tenggat lampau | "Tanggal ini sudah lewat. Tetap simpan jika memang benar." |
 | C-42 | Tanggal kunjungan lampau | "Tanggal ini sudah lewat — cocok untuk mencatat kunjungan yang sudah terjadi." |
 | C-50 | Gagal simpan | "Gagal menyimpan. Data Anda masih ada di formulir — coba lagi." Aksi snackbar: "Coba lagi" |
@@ -557,18 +710,33 @@ Semua string berada di `res/values/strings.xml` (tidak di-hardcode) dengan key s
 | C-63 | Section pertanyaan kosong | "Belum ada pertanyaan. Tulis hal yang ingin Anda tanyakan." |
 | C-64 | Section hasil kosong | "Belum ada catatan hasil konsultasi." |
 | C-65 | Section tindak lanjut kosong | "Belum ada tindak lanjut." |
-| C-70 | Tentang – data | "Data hanya tersimpan di perangkat ini, tidak dikirim ke server, dan tidak ikut dicadangkan. Menghapus aplikasi akan menghapus semua catatan." |
+| C-70 | Tentang – data | "Data hanya tersimpan di perangkat ini, tidak dikirim ke server, dan tidak ikut dicadangkan otomatis oleh OS. Gunakan fitur Cadangan & Pemulihan (.tkbackup) untuk mengamankan data jika ganti/rusak HP." |
+| C-80 | Tombol cadangan | "Buat Cadangan (.tkbackup)" / "Pulihkan dari Berkas" |
+| C-81 | Petunjuk pertanyaan tertutup | "Pertanyaan ini bisa dijawab ya/tidak. Coba ubah agar tenaga kesehatan menjelaskan — misalnya mulai dengan 'Mengapa…' atau 'Bagaimana…'." Tombol: "Tetap Gunakan" |
+| C-82 | Peringatan lokasi cadangan | "Berkas ini tersimpan di HP ini. Jika HP rusak atau hilang, berkas ikut hilang. Salin ke Google Drive, komputer, atau tempat lain." |
+| C-83 | Peringatan kata sandi | "Kata sandi tidak disimpan dan tidak bisa dipulihkan. Jika lupa, cadangan ini tidak dapat dibuka." |
+| C-84 | Konfirmasi pulihkan | "Data di HP ini akan diganti dengan isi berkas cadangan. Tindakan ini tidak dapat dibatalkan." |
+| C-85 | Gagal membuka cadangan | "Cadangan tidak bisa dibuka. Periksa kata sandi atau pastikan berkas tidak rusak. Data Anda saat ini tidak berubah." |
+| C-86 | Versi baru | "Cadangan ini dibuat oleh versi Teman Kontrol yang lebih baru. Perbarui aplikasi lalu coba lagi." |
+| C-87 | Peringatan foto | "Hindari memotret dokumen berisi NIK, nomor BPJS, atau data pribadi yang tidak diperlukan." |
+| C-88 | Persetujuan rekaman | "Rekam percakapan hanya setelah tenaga kesehatan menyetujui." |
+| C-89 | Batas lampiran / ruang penuh | "Batas lampiran tercapai (10 foto, 5 catatan suara per kunjungan)." / "Ruang penyimpanan HP hampir penuh." |
+| C-90 | Notifikasi kunjungan (privat) | Judul "Teman Kontrol" · isi "Ada jadwal kunjungan besok pukul 09.00" |
+| C-91 | Notifikasi tenggat (privat) | "Ada tindak lanjut yang jatuh tempo hari ini" |
+| C-92 | Notifikasi cadangan | "Sudah 30 hari sejak cadangan terakhir. Buat cadangan baru?" |
+| C-93 | Izin notifikasi ditolak | "Notifikasi dimatikan di pengaturan HP. Aktifkan agar pengingat muncul." Tombol "Buka" |
 
-### 14.4 Katalog Saran Pertanyaan (F-07)
+### 14.4 Katalog Saran Pertanyaan Terbuka (F-07 & F-11)
 
-Disusun generik, non-klinis, terinspirasi pola AHRQ QuestionBuilder [REF-02].
+Disusun **100% pertanyaan terbuka** (diawali Apa/Mengapa/Bagaimana/Jelaskan, tanpa pertanyaan ya/tidak), generik, non-klinis, terinspirasi pola AHRQ QuestionBuilder, *Ask Me 3*, *Teach-Back*, dan *BRAN* [REF-02][REF-10..12].
 
-| Kategori | Template |
+| Kategori | Template (4 per kategori = 20 total) |
 |---|---|
-| Gejala | "Apa kemungkinan penyebab keluhan yang saya alami?" · "Keluhan apa yang perlu saya perhatikan atau segera laporkan?" · "Berapa lama biasanya keluhan ini membaik?" · "Apakah ada aktivitas yang sebaiknya saya hindari?" |
-| Pemeriksaan | "Pemeriksaan apa yang perlu saya jalani dan untuk apa?" · "Apa yang perlu saya siapkan sebelum pemeriksaan?" · "Kapan dan bagaimana saya mendapatkan hasilnya?" · "Apa arti hasil pemeriksaan saya?" |
-| Perawatan | "Apa saja pilihan perawatan yang tersedia?" · "Bagaimana cara menggunakan obat ini dengan benar?" · "Efek samping apa yang perlu saya waspadai?" · "Apa yang harus saya lakukan jika lupa minum obat?" |
-| Langkah Berikutnya | "Kapan saya perlu kontrol lagi?" · "Siapa yang dapat saya hubungi jika ada pertanyaan?" · "Tanda apa yang berarti saya harus segera kembali?" · "Apa yang perlu saya bawa pada kunjungan berikutnya?" |
+| Gejala (`SYMPTOM`) | "Apa kemungkinan penyebab keluhan yang saya alami? Tolong jelaskan." · "Keluhan seperti apa yang perlu saya perhatikan, dan apa yang harus saya lakukan jika itu terjadi?" · "Bagaimana perkembangan keluhan ini biasanya, dan berapa lama saya perlu menunggu perbaikan?" · "Aktivitas atau kebiasaan apa saja yang sebaiknya saya sesuaikan selama masa ini, dan mengapa?" |
+| Pemeriksaan (`EXAM`) | "Pemeriksaan apa yang perlu saya jalani, dan apa tujuannya?" · "Bagaimana saya harus mempersiapkan diri sebelum pemeriksaan?" · "Bagaimana dan kapan saya akan mendapat hasilnya, dan siapa yang akan menjelaskannya?" · "Tolong jelaskan arti hasil pemeriksaan saya dengan bahasa yang mudah saya pahami." |
+| Perawatan (`TREATMENT`) | "Apa saja pilihan perawatan yang tersedia, beserta manfaat dan risikonya masing-masing?" · "Bagaimana cara yang benar menggunakan obat ini, dan apa yang terjadi jika saya salah menggunakannya?" · "Efek samping apa yang mungkin muncul, dan bagaimana saya mengenalinya?" · "Apa yang terjadi jika saya memilih untuk tidak menjalani perawatan ini?" |
+| Langkah Berikutnya (`NEXT_STEP`) | "Bagaimana rencana kontrol saya berikutnya, dan apa yang perlu dipantau sampai saat itu?" · "Siapa yang bisa saya hubungi, dan bagaimana caranya, bila saya punya pertanyaan di rumah?" · "Tanda-tanda apa yang berarti saya perlu segera kembali, dan ke mana saya harus pergi?" · "Apa yang perlu saya siapkan atau bawa pada kunjungan berikutnya?" |
+| Pemahaman (`UNDERSTANDING`) | "Apa masalah utama saya saat ini, menurut tenaga kesehatan?" · "Apa yang perlu saya lakukan berikutnya, langkah demi langkah?" · "Mengapa langkah tersebut penting untuk saya?" · "Bagaimana penjelasan ini bisa saya sampaikan kepada keluarga di rumah?" |
 
 ### 14.5 Format Tanggal & Waktu
 
@@ -588,7 +756,9 @@ Disusun generik, non-klinis, terinspirasi pola AHRQ QuestionBuilder [REF-02].
 
 enum class ConsultationStatus { SCHEDULED, COMPLETED, CANCELLED }
 enum class StatusFilter { ALL, SCHEDULED, COMPLETED, CANCELLED }
-enum class SuggestionCategory { SYMPTOM, EXAM, TREATMENT, NEXT_STEP }
+enum class SuggestionCategory { SYMPTOM, EXAM, TREATMENT, NEXT_STEP, UNDERSTANDING }
+enum class AttachmentKind { PHOTO, VOICE }
+enum class AttachmentTarget { QUESTION, ADDITIONAL_NOTE }
 
 data class Consultation(
     val id: ConsultationId,
@@ -621,6 +791,23 @@ data class Question(
     val isDiscussed: Boolean,
     val createdAt: Instant,
     val updatedAt: Instant,
+    val answer: String? = null,
+    val answerUpdatedAt: Instant? = null,
+)
+
+data class Attachment(
+    val id: String,
+    val consultationId: ConsultationId,
+    val questionId: String? = null,
+    val target: AttachmentTarget = AttachmentTarget.ADDITIONAL_NOTE,
+    val kind: AttachmentKind,
+    val fileName: String,
+    val mimeType: String,
+    val sizeBytes: Long,
+    val durationMs: Long? = null,
+    val caption: String? = null,
+    val uriString: String? = null,
+    val createdAt: Instant,
 )
 
 data class ConsultationNote(
@@ -649,7 +836,27 @@ data class QuestionSuggestion(val id: String, val category: SuggestionCategory, 
 
 Input untuk create/update memakai kelas terpisah (`ConsultationInput`, `QuestionInput`, `NoteInput`, `FollowUpInput`) yang berisi field yang dapat diedit pengguna saja. Waktu (`Instant`, `LocalDate`) dari `java.time` (tersedia native di API 26+). Waktu "sekarang" diambil dari `Clock` yang di-inject (agar dapat diuji).
 
-### 15.2 Skema Room (versi skema 1)
+### 15.2 Skema Room (v1 → v2 → v3)
+
+- **v1 (MVP ✅):** `consultations`, `questions`, `consultation_notes`, `follow_up_actions`.
+- **v2 (Target R1):** `ALTER TABLE questions ADD COLUMN answer TEXT`, `ALTER TABLE questions ADD COLUMN answer_updated_at INTEGER`, dan tabel baru `reminder_log (key TEXT PRIMARY KEY, fired_at INTEGER NOT NULL)`.
+- **v3 (Target R2):** tabel baru `attachments`:
+
+| Kolom | Tipe | Constraint |
+|---|---|---|
+| id | TEXT | PK (UUID) |
+| consultation_id | TEXT | NOT NULL, FK → consultations.id ON DELETE CASCADE |
+| question_id | TEXT | NULL, FK → questions.id ON DELETE CASCADE |
+| target | TEXT | NOT NULL (`QUESTION` / `ADDITIONAL_NOTE`) |
+| kind | TEXT | NOT NULL (`PHOTO` / `VOICE`) |
+| file_name | TEXT | NOT NULL |
+| mime_type | TEXT | NOT NULL (`image/jpeg` / `audio/mp4`) |
+| size_bytes | INTEGER | NOT NULL |
+| duration_ms | INTEGER | NULL (khusus `VOICE`) |
+| caption | TEXT | NULL |
+| created_at | INTEGER | NOT NULL |
+
+**DataStore (Preferences):** `notice_accepted` (v1), ditambah untuk v2.0: `last_backup_at`, `data_changed_since_backup`, `reminder_visit_enabled`, `reminder_visit_hour`, `reminder_prepare_enabled`, `reminder_followup_enabled`, `reminder_followup_hour`, `reminder_backup_enabled`, `notif_show_title`, `app_lock_enabled`, `app_lock_timeout`, `secure_screen`.
 
 **`consultations`**
 
@@ -734,12 +941,19 @@ Validasi dijalankan di domain layer (`domain/validation`, fungsi murni, di-unit-
 | VR-04 | Fasilitas | Opsional; ≤ 100 | C-11 |
 | VR-05 | Nama tenaga kesehatan | Opsional; ≤ 100 | C-11 |
 | VR-06 | Teks pertanyaan | Wajib; 1–250 | C-10, C-11 |
-| VR-07 | Prioritas | Maks. 3 prioritas per kunjungan (tidak termasuk dirinya saat edit) | C-13 |
+| VR-07 | Prioritas | *(Diperbarui DEC-030)* Tidak dibatasi; bebas menandai berapa pun pertanyaan sebagai prioritas | — |
 | VR-08 | Duplikat pertanyaan | `text_normalized` unik per kunjungan (saat edit, dirinya dikecualikan) | C-14 |
 | VR-09 | Field catatan | Masing-masing ≤ 2.000 | C-11 |
 | VR-10 | Catatan | Minimal satu field terisi | C-12 |
 | VR-11 | Teks tindak lanjut | Wajib; 1–250 | C-10, C-11 |
 | VR-12 | Tenggat | Opsional; valid; lampau → peringatan C-41 (bukan error) | C-15, C-41 |
+| VR-13 | Jawaban pertanyaan | Opsional; ≤ 1.000 karakter | C-11 |
+| VR-14 | Keterangan lampiran | Opsional; ≤ 100 karakter | C-11 |
+| VR-15 | Durasi catatan suara | 1 dtk – 10 menit; berhenti otomatis di 10 menit | — |
+| VR-16 | Batas lampiran per kunjungan | ≤ 10 foto dan ≤ 5 VN per kunjungan | C-89 |
+| VR-17 | Kata sandi cadangan | ≥ 8 karakter; konfirmasi harus sama (bila enkripsi aktif) | — |
+| VR-18 | Pertanyaan tertutup | Deteksi kata awal ya/tidak (`apakah`/`bolehkah`/dll.) → **petunjuk lembut non-blocking** | C-81 |
+| VR-19 | Jam pengingat | Rentang 06.00–21.59 | — |
 
 **Character counter** tampil bila panjang ≥ 80% batas. Input yang melebihi batas tetap diterima di field (tidak dipotong diam-diam) tetapi Simpan menampilkan error.
 
@@ -779,10 +993,11 @@ id.temankontrol.app
 │   └── di/                     (Hilt modules: DatabaseModule, RepositoryModule)
 ├── feature/
 │   ├── notice/  home/  history/  about/
-│   ├── consultation/ (form/, detail/)
+│   ├── settings/  backup/  reminder/  lock/  summary/
+│   ├── consultation/ (form/, detail/, mode/)
 │   ├── question/  note/  followup/
 │   (tiap feature: XxxScreen.kt, XxxViewModel.kt, XxxUiState.kt)
-└── navigation/                 (Routes.kt, AppNavHost.kt, BottomBar.kt)
+└── navigation/                 (NavRoutes.kt, AppNavHost.kt)
 ```
 
 ### 16.3 Error & Result
@@ -820,13 +1035,38 @@ interface ConsultationRepository {
 }
 
 interface QuestionRepository {
-    fun observeByConsultation(id: ConsultationId): Flow<List<Question>>   // sudah terurut sesuai F-03
+    fun observeByConsultation(id: ConsultationId): Flow<List<Question>>
     suspend fun get(questionId: String): AppResult<Question>
     suspend fun create(id: ConsultationId, input: QuestionInput): AppResult<String>
     suspend fun update(questionId: String, input: QuestionInput): AppResult<Unit>
+    suspend fun updateAnswer(questionId: String, answer: String?): AppResult<Unit>
     suspend fun setDiscussed(questionId: String, discussed: Boolean): AppResult<Unit>
     suspend fun delete(questionId: String): AppResult<Unit>
     suspend fun priorityCount(id: ConsultationId, excludeQuestionId: String? = null): AppResult<Int>
+    suspend fun copyUnansweredQuestions(
+        fromConsultationId: ConsultationId,
+        toConsultationId: ConsultationId,
+        questionIds: Set<String>? = null
+    ): AppResult<CopyQuestionsResult>
+}
+
+interface AttachmentRepository {
+    fun observeByConsultation(id: ConsultationId): Flow<List<Attachment>>
+    fun observeAll(): Flow<List<Attachment>>
+    suspend fun addAttachment(
+        consultationId: ConsultationId,
+        questionId: String?,
+        target: AttachmentTarget,
+        kind: AttachmentKind,
+        fileName: String,
+        mimeType: String,
+        sizeBytes: Long,
+        durationMs: Long? = null,
+        caption: String? = null,
+        uriString: String? = null
+    ): AppResult<String>
+    suspend fun updateCaption(attachmentId: String, caption: String?): AppResult<Unit>
+    suspend fun delete(attachmentId: String): AppResult<Unit>
 }
 
 interface NoteRepository {
@@ -878,17 +1118,20 @@ interface SuggestionCatalog {
 | Bahasa | Kotlin (versi di `libs.versions.toml`, saat ini 2.2.10) |
 | Build | Gradle wrapper 9.6 + AGP 9.4.1, Kotlin DSL, version catalog |
 | JDK | JBR bawaan Android Studio (Java 21+); `compileOptions` Java 17 |
-| UI | Jetpack Compose (BOM), Material 3, `material-icons-core` |
+| UI | Jetpack Compose (BOM), Material 3, `material-icons-core`, `material-icons-extended` (DEC-014) |
 | Navigasi | `androidx.navigation:navigation-compose` + `kotlinx-serialization-json` plugin |
 | Lifecycle | `lifecycle-runtime-compose`, `lifecycle-viewmodel-compose` |
 | DI | Hilt + `hilt-navigation-compose`, via **KSP** |
 | Database | Room (`room-runtime`, `room-ktx`, `room-compiler` via KSP, `room-testing`) |
 | Preferences | `datastore-preferences` |
 | Koleksi | `kotlinx-collections-immutable` |
+| Keamanan & Media (v2.0) | `androidx.biometric` (Kunci Aplikasi), API bawaan Android (`MediaRecorder`, `MediaPlayer`, `ImageDecoder`, `AlarmManager`, `PdfDocument`, `FileProvider`, JCA AES-256-GCM) |
 | Splash | `core-splashscreen` |
 | Test | JUnit4, `kotlinx-coroutines-test`, Turbine, Compose UI Test, Room in-memory, Hilt testing |
 | Debug only | LeakCanary |
-| Dilarang | Gson, RxJava, Retrofit/OkHttp, Firebase/analytics, `material-icons-extended`, library image loading |
+| Dilarang | Gson, RxJava, Retrofit/OkHttp, Firebase/analytics, library image loading eksternal, izin `INTERNET` |
+
+**Izin Manifest v2.0:** `POST_NOTIFICATIONS` (pengingat lokal), `RECEIVE_BOOT_COMPLETED` (reschedule setelah reboot), `RECORD_AUDIO` (rekam catatan suara, diminta kontekstual); **tanpa** `INTERNET` (`tools:node="remove"`), `CAMERA` (pakai `TakePicture`), maupun `READ_EXTERNAL_STORAGE`/`READ_MEDIA_*` (pakai `PickVisualMedia`). `FileProvider` (`exported="false"`) dipakai untuk tangkapan kamera & share PDF.
 
 **Konfigurasi wajib (dilakukan Day 1):**
 
@@ -956,7 +1199,9 @@ PRD v1.0 difinalisasi; toolchain diverifikasi (Android SDK, JBR, Gradle, `compil
 | 3 — Integrasi | 15–21 Okt | Swap binding ke Room, process-death draft, happy path end-to-end | Happy path §19.1 lulus di perangkat |
 | 4 — Edge case & QA | 22–28 Okt | Error/duplikat/cascade/aksesibilitas/performa §11.1 | Regression suite hijau; budget performa terukur |
 | 5 — UAT | 29 Okt–2 Nov | UAT 5 peserta, perbaikan | 0 critical defect |
-| 6 — Finalisasi | 3–6 Nov | Release build tersign, Baseline Profile (opsional), data demo fiktif, dokumentasi | MVP checklist §19.3 lengkap |
+| 6 — Finalisasi v1.0 | 3–6 Nov | Release build tersign, Baseline Profile (opsional), data demo fiktif, dokumentasi | MVP v1.0 selesai secara fungsional (PARTIAL di UAT & pengukuran perangkat) |
+| 7 — Revisi UI (v2.0) | 17 Nov ✅ | Implementasi penuh tampilan F-10 s/d F-17, katalog 20 pertanyaan terbuka, tanpa batas 3 prioritas, lampiran Foto & VN per pertanyaan & catatan tambahan | `assembleDebug`, 42 unit test, `lintDebug` hijau |
+| 8 — Engine & Room v2/v3 | Tahap berikutnya | Migrasi Room v1→v2→v3 (`MigrationTestHelper`), `.tkbackup` ZIP+AES-256 SAF, `AlarmManager` pengingat lokal, `MediaRecorder`/`MediaPlayer` + kompresi JPEG, `BiometricPrompt`, `PdfDocument`, contract test & UAT | Seluruh AC-01..56 lulus; release keystore |
 
 ---
 
@@ -1002,7 +1247,7 @@ Submit → Validasi
 | AC-01 | First launch | Pengguna tap "Saya Mengerti" | Beranda terbuka; notice tidak muncul di peluncuran berikutnya |
 | AC-02 | Form kunjungan valid | Tap Simpan berulang cepat | Tepat satu record dibuat; Detail terbuka |
 | AC-03 | Field wajib kosong | Tap Simpan | Tidak ada tulis; error inline C-10 |
-| AC-04 | Sudah ada 3 prioritas | Pertanyaan ke-4 ditandai prioritas | Toggle nonaktif dengan teks C-13; repository juga menolak |
+| AC-04 | *(Diperbarui DEC-030)* Sudah ada 3 pertanyaan prioritas | Pertanyaan ke-4 ditandai prioritas | Tersimpan sebagai prioritas tanpa pembatasan |
 | AC-05 | Pertanyaan "Kapan kontrol lagi?" ada | Simpan "  kapan KONTROL   lagi? " | Ditolak dengan C-14 |
 | AC-06 | Pertanyaan belum dibahas | Dicentang | Status bertahan setelah relaunch; posisi item tidak berubah |
 | AC-07 | Minimal satu field catatan valid | Simpan | Preview & waktu diperbarui tampil di Detail, bertahan setelah relaunch |
@@ -1021,6 +1266,25 @@ Submit → Validasi
 | AC-20 | Release build, dataset D-100 | Cold start 5 kali | Median `TotalTime` ≤ 1.500 ms |
 | AC-21 | Kunjungan Terjadwal kemarin | Buka Riwayat/Beranda | Label "Lewat jadwal" tampil; Beranda menampilkan section "Perlu diperbarui" |
 | AC-22 | Tema gelap sistem | Buka semua layar | Teks terbaca (NFR-031), tidak ada warna hardcode terang |
+| AC-23 | Ada data & lampiran | Buat cadangan `.tkbackup` (tanpa/dengan kata sandi AES-256) | Berkas valid terbentuk; peringatan C-82 tampil bila tersimpan lokal |
+| AC-24 | Cadangan terenkripsi | Dibuka dengan kata sandi salah | Ditolak (C-85); data lokal tidak berubah |
+| AC-25 | HP baru / data kosong | Pulihkan dari `.tkbackup` | Seluruh kunjungan, pertanyaan+jawaban, catatan, tindak lanjut, lampiran identik |
+| AC-26 | Berkas rusak / format lebih baru | Pulihkan | Pesan spesifik (C-85/C-86); tidak ada perubahan data |
+| AC-27 | Pemulihan dihentikan paksa | Buka kembali aplikasi | Data lama tetap utuh (transaksi atomik) |
+| AC-28 | Pertanyaan ya/tidak diketik | Ketik "Apakah boleh makan?" | Petunjuk lembut C-81 tampil; "Tetap Gunakan" mengizinkan simpan |
+| AC-29 | Katalog saran | Buka sheet saran | 20 template terbuka di 5 kategori (termasuk Pemahaman), tanpa pertanyaan ya/tidak |
+| AC-30 | Pertanyaan dengan jawaban & Foto/VN | Buka Daftar/Detail setelah simpan | Jawaban dicatat dan lampiran Foto/VN tampil langsung di pertanyaan tersebut |
+| AC-31 | Catatan Tambahan | Tambah Foto/VN di Catatan Tambahan | Lampiran tampil di bagian Catatan Tambahan (SCR-06) & ringkasan di SCR-04 |
+| AC-32 | Pengingat aktif + izin diberikan | Capai jadwal H-1 / hari-H / 30 hari | Notifikasi muncul (±15 menit) dengan teks generik privat di layar kunci |
+| AC-33 | Perangkat reboot / ganti zona waktu | Reboot / ubah zona waktu | Jadwal pengingat terhitung ulang otomatis tanpa duplikasi |
+| AC-34 | Izin notifikasi ditolak | Buka SCR-12 | Banner + tombol Pengaturan tampil; aplikasi tetap berfungsi penuh |
+| AC-35 | Rekam suara | Tap Rekam VN | Pengingat persetujuan (C-88); auto-stop saat background/10 menit; putar 1x/1,5x/2x |
+| AC-36 | Hapus pertanyaan / kunjungan | Konfirmasi hapus | Data & file fisik lampiran terhapus; pembersih yatim piatu menjaga kebersihan |
+| AC-37 | Kunci Aplikasi aktif | Buka aplikasi / *recent apps* | `BiometricPrompt` diminta; `FLAG_SECURE` menyembunyikan pratinjau |
+| AC-38 | Mode Konsultasi | Mulai Konsultasi | Teks ≥ 24 sp, keep-screen-on, centang dibahas, catat jawaban & Foto/VN per pertanyaan |
+| AC-39 | Kunjungan Selesai dengan pertanyaan belum dibahas | Tandai Selesai | Dialog Bawa Pertanyaan muncul; salin tanpa duplikat ke kunjungan tujuan |
+| AC-40 | Ringkasan & Bagikan | Buka Ringkasan (SCR-17) | Pratinjau A4 + disclaimer; bagikan Teks & PDF via share sheet; tanpa `INTERNET` |
+| AC-41 | Data v1.0 terpasang | Update ke skema Room v2/v3 | Migrasi sukses; seluruh data v1 utuh |
 
 ---
 
@@ -1046,7 +1310,7 @@ Submit → Validasi
 | TC-003 | Tolak kunjungan invalid | AC-03 |
 | TC-004 | Cegah duplikat karena tap cepat | AC-02 |
 | TC-005 | Tambah/edit/hapus pertanyaan | FR-007 |
-| TC-006 | Batas 3 prioritas | AC-04 |
+| TC-006 | *(Diperbarui DEC-030)* Pertanyaan prioritas > 3 diizinkan | AC-04 |
 | TC-007 | Tolak pertanyaan duplikat | AC-05 |
 | TC-008 | Status dibahas bertahan | AC-06 |
 | TC-009 | Upsert & hapus catatan | AC-07, AC-08 |
@@ -1065,6 +1329,15 @@ Submit → Validasi
 | TC-022 | Budget performa (NFR-001, 025–028) | AC-20 |
 | TC-023 | Dark mode semua layar | AC-22 |
 | TC-024 | TalkBack membaca checkbox & status | NFR-032 |
+| TC-025 | Audit katalog terbuka (20 template, 5 kategori, tanpa ya/tidak) | AC-29, FR-033 |
+| TC-026 | `MigrationTestHelper` v1→v2 dan v2→v3 | AC-41, NFR-049 |
+| TC-027 | Ekspor & pemulihan `.tkbackup` (enkripsi AES-256, checksum, rollback saat gagal) | AC-23..27, NFR-041..042 |
+| TC-028 | Deteksi pertanyaan tertutup non-blocking & jawaban dicatat | AC-28, AC-30, VR-13, VR-18 |
+| TC-029 | `ReminderPlanner`, reboot, zona waktu, & notifikasi privat layar kunci | AC-32..34, NFR-045..046 |
+| TC-030 | Lampiran Foto (EXIF dihapus, ≤ 1.600 px) & VN (maks. 10 menit, auto-stop) per pertanyaan & Catatan Tambahan | AC-30, AC-31, AC-35, AC-36 |
+| TC-031 | Kunci Aplikasi (`BiometricPrompt`, timeout, `FLAG_SECURE`) | AC-37, FR-057 |
+| TC-032 | Mode Konsultasi, Bawa Pertanyaan (dedupe), & Ringkasan Teks/PDF | AC-38..40, FR-058..060 |
+| TC-033 | Audit merged manifest v2.0 (tanpa `INTERNET`, `allowBackup=false`, `FileProvider` non-exported) | NFR-014, NFR-034, NFR-036 |
 
 ### 21.3 Perintah Standar
 
@@ -1111,7 +1384,13 @@ $env:JAVA_HOME = "C:\Program Files\Android\Android Studio1\jbr"
 | R-08 | Redmi Note 10S gagal terdeteksi (MIUI) | Medium | Medium | Aktifkan *Install via USB*; emulator API 30 cadangan; kabel data cadangan | Tech lead |
 | R-09 | Performa turun di data besar | Medium | Low | Index §15.3, projection, D-100, budget §11.1 | Developer |
 | R-10 | UAT tertunda | Medium | Medium | Rekrut 5 peserta paling lambat 24 Okt | PM/QA |
-| R-11 | Pengguna kehilangan data saat ganti HP (konsekuensi DEC-006) | Medium | Medium | Dijelaskan di C-70; ekspor di backlog | PM |
+| R-11 | Pengguna kehilangan data saat ganti/rusak HP (konsekuensi DEC-006) | High | Medium | **Mitigated by F-10** (`.tkbackup` via SAF) + pengingat cadangan berkala (F-12) | PM |
+| R-12 | Pengguna tidak menyalin cadangan ke luar HP atau lupa kata sandi enkripsi | High | Medium | Peringatan C-82 & C-83 eksplisit, enkripsi opsional | PM/FE |
+| R-13 | Pengingat tertunda pada perangkat dengan pembatasan baterai (MIUI/Xiaomi) | High | High | Panduan pengaturan baterai OEM (FR-046) & toleransi keterlambatan | Tech lead |
+| R-14 | Notifikasi membocorkan detail medis di layar kunci | High | Medium | Privasi default generik (DEC-026) | Developer |
+| R-15 | Lampiran Foto/VN membengkakkan penyimpanan atau memicu OOM | Medium | Medium | Kompresi JPEG ≤ 1.600 px, batas 10 foto + 5 VN, dekode downsampled | Developer |
+| R-16 | Isu persetujuan merekam percakapan tenaga kesehatan | High | Medium | Pengingat etika C-88 sebelum rekam, tanpa rekaman latar belakang | PM |
+| R-17 | Migrasi skema Room v1→v2→v3 merusak data pengguna | High | Low | `Migration` eksplisit + `MigrationTestHelper`; destructive migration dilarang | Developer |
 
 ---
 
@@ -1134,13 +1413,13 @@ Semua pertanyaan blocking telah dijawab. Sisa pertanyaan non-blocking:
 
 | ID | Pertanyaan | Default bila tidak dijawab | Batas |
 |---|---|---|---|
-| OQ-05 | Apakah pengingat lokal masuk MVP? | Tidak (backlog) | 21 Okt |
-| OQ-06 | Perlu pencarian teks riwayat? | Tidak (backlog) | Setelah MVP |
-| OQ-07 | Perlu ekspor PDF/share? | Tidak (backlog) | Setelah MVP |
-| OQ-08 | Perlu app lock untuk demo? | Tidak | Setelah MVP |
-| OQ-09 | Pendamping perlu profil pasien terpisah? | Tidak (single profile) | Setelah MVP |
-| OQ-10 | Perlu perangkat Android cadangan selain Redmi Note 10S? | Emulator API 30 sebagai cadangan | Sebelum UAT |
-| OQ-11 | Desain ikon aplikasi (launcher icon)? | Ikon vektor sederhana berbasis warna seed | 3 Nov |
+| OQ-05 | Apakah pengingat lokal masuk? | **Ya — F-12 (DEC-025/026)** | Ditutup (v2.0) |
+| OQ-06 | Perlu pencarian teks riwayat? | Tidak (backlog Room FTS4) | Setelah v2.0 |
+| OQ-07 | Perlu ekspor PDF/share? | **Ya — F-17 Ringkasan & Bagikan** | Ditutup (v2.0) |
+| OQ-08 | Perlu app lock? | **Ya — F-14 (DEC-028)** | Ditutup (v2.0) |
+| OQ-09 | Pendamping perlu profil pasien terpisah? | Tidak (backlog) | Setelah v2.0 |
+| OQ-10 | Perlu perangkat Android cadangan selain Redmi Note 10S? | Emulator API 30 sebagai cadangan | Ditutup |
+| OQ-11 | Desain ikon aplikasi (launcher icon)? | Ikon vektor adaptif tema teal `#0F7C80` | Ditutup |
 
 ---
 
@@ -1153,11 +1432,13 @@ Semua pertanyaan blocking telah dijawab. Sisa pertanyaan non-blocking:
 | A-004 | Pengguna utama pasien umum dewasa | Copy & skenario berubah |
 | A-005 | Core flow: prepare → record → follow up | Prioritas fitur berubah |
 | A-006 | Tanpa backend di MVP | Auth/API menjadi scope baru |
-| A-007 | Batas 3 prioritas diterima sebagai aturan UX | Validasi & UI berubah |
+| A-007 | *(Superseded by DEC-030)* Batas 3 prioritas dihapus; seluruh pertanyaan penting boleh ditandai prioritas | — |
 | A-008 | 5 peserta UAT tersedia | Target metric disesuaikan |
 | A-009 | Data demo fiktif | Risiko privasi |
 | A-010 | Bahasa Indonesia satu-satunya bahasa | Perlu localization |
-| A-011 | Redmi Note 10S tersedia sebagai perangkat demo | Strategi demo berubah |
+| A-011 | Redmi Note 10S & AVD Emulator API 30+ tersedia sebagai perangkat uji | Strategi uji disesuaikan |
+| A-012 | Pengguna bersedia menyimpan berkas `.tkbackup` ke luar HP (Drive/komputer) | Perlindungan saat HP rusak berkurang (R-12) |
+| A-013 | Pengingat *inexact* ±15 menit memadai tanpa `SCHEDULE_EXACT_ALARM` | Perlu izin exact alarm pada Android 14+ |
 
 (A-002 tentang framework telah menjadi DEC-001.)
 
@@ -1172,7 +1453,12 @@ Semua pertanyaan blocking telah dijawab. Sisa pertanyaan non-blocking:
 | P-03 | US-05, US-06 | F-05, F-08; FR-002, FR-012–013, FR-025 | SCR-02, SCR-04, SCR-07 | FollowUpRepository / `follow_up_actions` | AC-09, AC-21; TC-010–011 |
 | P-01–03 | US-01, US-07 | F-02; FR-003–006, FR-024 | SCR-03, SCR-04 | ConsultationRepository / `consultations` | AC-02–03, AC-10, AC-18; TC-002–004, TC-013 |
 | P-03 | US-08 | F-06; FR-014–015 | SCR-08 | ConsultationRepository | AC-12–13; TC-012 |
-| P-04 | Semua | F-01, F-09; FR-001, FR-017–023; NFR-001–039 | Semua | Room, DataStore | AC-01, AC-11, AC-14–17, AC-19–20, AC-22; TC-014–024 |
+| P-04 | Semua | F-01, F-09, F-14; FR-001, FR-017–023, FR-057; NFR-001–052 | Semua, SCR-10, SCR-15 | Room, DataStore, Biometric | AC-01, AC-11, AC-14–22, AC-37; TC-014–024, TC-031, TC-033 |
+| P-05 | US-10 | F-10; FR-026–031 | SCR-11 | BackupRepository / `.tkbackup` | AC-23–27; TC-027 |
+| P-06 | US-11 | F-13; FR-047–056 | SCR-04, SCR-05, SCR-06, SCR-13, SCR-14 | AttachmentRepository / `attachments` | AC-30–31, AC-35–36; TC-030 |
+| P-07 | US-09 | F-11, F-07; FR-033–037 | SCR-04, SCR-05, SCR-16 | StaticSuggestionCatalog, QuestionRepository | AC-28–30; TC-025, TC-028 |
+| P-08 | US-14 | F-15, F-16, F-17; FR-058–060 | SCR-04, SCR-16, SCR-17 | QuestionRepository, PdfDocument | AC-38–40; TC-032 |
+| P-09 | US-12 | F-12; FR-038–046 | SCR-12 | ReminderScheduler / `reminder_log` | AC-32–34; TC-029 |
 
 ---
 
@@ -1189,15 +1475,15 @@ Semua pertanyaan blocking telah dijawab. Sisa pertanyaan non-blocking:
 
 ---
 
-## 29. Backlog (Post-MVP, tidak dikerjakan sekarang)
+## 29. Backlog (Pasca v2.0, tidak dikerjakan sekarang)
 
 | Item | Pri | Catatan |
 |---|---|---|
-| Pengingat lokal kunjungan & tenggat | P2 | Butuh izin `POST_NOTIFICATIONS` (API 33+) & exact alarm policy |
-| Ekspor/share ringkasan | P2 | Menjadi solusi R-11 |
-| App lock (PIN/biometrik) & `FLAG_SECURE` | P2 | |
-| Pencarian riwayat | P2 | Room FTS4 |
-| Sinkronisasi cloud | P3 | Butuh auth, conflict resolution, privacy notice — PRD change request |
+| Cadangan otomatis berkala ke folder pilihan (SAF `OpenDocumentTree`) | P2 | Memperluas F-10 |
+| Pencarian teks riwayat | P2 | Room FTS4 (OQ-06) |
+| Profil pasien terpisah untuk pendamping | P2 | OQ-09 |
+| Transkripsi catatan suara offline | P3 | Butuh riset kualitas & ukuran model |
+| Sinkronisasi cloud & akun | P3 | Proyek terpisah (auth, server, kepatuhan UU PDP) |
 
 ---
 
@@ -1214,6 +1500,11 @@ Semua pertanyaan blocking telah dijawab. Sisa pertanyaan non-blocking:
 | REF-07 | Android Developers — *Jetpack Compose performance best practices*. https://developer.android.com/develop/ui/compose/performance/bestpractices |
 | REF-08 | Android Developers — *Accessibility: touch target size*. https://developer.android.com/guide/topics/ui/accessibility/apps |
 | REF-09 | Android Developers — *Back up user data with Auto Backup*. https://developer.android.com/identity/data/autobackup |
+| REF-10 | Institute for Healthcare Improvement — *Ask Me 3: Good Questions for Your Good Health*. |
+| REF-11 | AHRQ — *Health Literacy Universal Precautions Toolkit: Teach-Back Method*. |
+| REF-12 | NHS / *Realistic Medicine* — pola *BRAN* (Benefits, Risks, Alternatives, do Nothing). |
+| REF-13 | Android Developers — *Storage Access Framework*, *Photo Picker*, *Notifications & Alarms*, *BiometricPrompt*. |
+| REF-14 | OWASP — *Password Storage Cheat Sheet* (parameter PBKDF2WithHmacSHA256 ≥ 600.000 iterasi). |
 
 ---
 
@@ -1222,4 +1513,5 @@ Semua pertanyaan blocking telah dijawab. Sisa pertanyaan non-blocking:
 | Versi | Tanggal | Perubahan |
 |---|---|---|
 | 0.2 | 6 Okt 2026 | Draft: Android-only, offline, Redmi Note 10S (arsip: `docs/archive/PRD_v0.2.md`) |
-| 1.0 | 6 Okt 2026 | **Approved.** OQ-01–04 dijawab (DEC-001, 002, 005, 007). Ditambahkan: Decision Log, Glosarium, kontrak repository Kotlin, skema Room + index, validation rules (VR), microcopy SSOT, design tokens, katalog saran, standar performa terukur (NFR-024–030) & aturan implementasi, privasi teknis (backup off, tanpa INTERNET), aksesibilitas (NFR-031–033), kompatibilitas (edge-to-edge, predictive back, dark mode), F-08 Beranda & F-09 Tentang, FR-023–025, AC-17–22, TC-021–024, technical spike TS-01, engineering conventions, references. Diperbaiki: timeline Day 1/Day 2, definisi Beranda & Riwayat, urutan daftar, transisi status, inkonsistensi nama layar, tag referensi yang tidak dapat ditelusuri, risiko "PRD technology-neutral" yang bertentangan dengan keputusan stack. Lokasi dipindah ke `docs/PRD.md`. |
+| 1.0 | 6 Okt 2026 | **Approved.** OQ-01–04 dijawab (DEC-001, 002, 005, 007). Ditambahkan: Decision Log, Glosarium, kontrak repository Kotlin, skema Room + index, validation rules (VR), microcopy SSOT, design tokens, katalog saran, standar performa terukur (NFR-024–030) & aturan implementasi, privasi teknis (backup off, tanpa INTERNET), aksesibilitas (NFR-031–033), kompatibilitas (edge-to-edge, predictive back, dark mode), F-08 Beranda & F-09 Tentang, FR-023–025, AC-17–22, TC-021–024, technical spike TS-01, engineering conventions, references. Lokasi dipindah ke `docs/PRD.md`. |
+| **2.0 (Final)** | **17 Nov 2026** | **Final SSOT Terpadu.** Menggabungkan PRD v1.0 dan seluruh revisi fitur klien (`PRD-REVISION-FEATURE.md`): F-10 Cadangan & Pemulihan `.tkbackup` (AES-256 opsional, tanpa login/internet), F-11 Pertanyaan Terbuka (katalog 20 template / 5 kategori termasuk Pemahaman, chip awalan, petunjuk non-blocking VR-18, jawaban dicatat VR-13), F-12 Pengingat Lokal privat (DEC-025/026), F-13 Lampiran Foto & VN **per pertanyaan** dan di **Catatan Tambahan / Hasil Konsultasi** (DEC-031), F-14 Kunci Aplikasi (DEC-028), F-15 Mode Konsultasi, F-16 Bawa Pertanyaan, F-17 Ringkasan & Bagikan (Teks/PDF); penghapusan batas 3 pertanyaan prioritas (DEC-030); pembaruan skema Room v1→v2→v3, SCR-10..SCR-17, FR-026..060, NFR-040..052, VR-13..19, AC-23..41, dan TC-025..033. |

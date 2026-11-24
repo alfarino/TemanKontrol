@@ -1,4 +1,4 @@
-﻿package id.temankontrol.app.core.common
+package id.temankontrol.app.core.common
 
 sealed interface AppResult<out T> {
     data class Success<T>(val data: T) : AppResult<T>
@@ -15,4 +15,5 @@ sealed interface AppError {
     data object Duplicate : AppError
     data object NotFound : AppError
     data object Storage : AppError
+    data class BackupError(val message: String) : AppError
 }

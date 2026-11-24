@@ -1,10 +1,11 @@
-﻿<resources>
+<resources>
     <string name="app_name">Teman Kontrol</string>
 
     <!-- Navigasi -->
     <string name="nav_home">Beranda</string>
     <string name="nav_history">Riwayat</string>
     <string name="nav_about">Tentang</string>
+    <string name="nav_settings">Pengaturan</string>
 
     <!-- Status & Filter -->
     <string name="status_scheduled">Terjadwal</string>
@@ -53,7 +54,7 @@
     <string name="action_mark_cancelled">Tandai Dibatalkan</string>
 
     <!-- C-40..C-42: Info & Warning Banner -->
-    <string name="banner_long_question_list">Daftar pertanyaan cukup panjang. Pastikan 3 pertanyaan terpenting ditandai prioritas.</string>
+    <string name="banner_long_question_list">Daftar pertanyaan cukup panjang. Tandai pertanyaan terpenting sebagai prioritas agar tampil paling atas.</string>
     <string name="banner_past_due_date">Tanggal ini sudah lewat. Tetap simpan jika memang benar.</string>
     <string name="banner_past_consultation_date">Tanggal ini sudah lewat - cocok untuk mencatat kunjungan yang sudah terjadi.</string>
 
@@ -101,5 +102,18 @@
     <string name="label_note_provider_instruction">Arahan Tenaga Kesehatan</string>
     <string name="hint_note_provider_instruction">Pantangan, anjuran gaya hidup, atau jadwal kontrol berikutnya</string>
     <string name="label_note_additional">Catatan Tambahan</string>
-    <string name="hint_note_additional">Hal lain yang perlu Anda ingat</string>
+    <string name="hint_note_additional">Hal lain atau penjelasan tambahan dari tenaga kesehatan yang perlu diingat</string>
+
+    <!-- Revisi Fitur: Microcopy C-80..C-93 -->
+    <string name="settings_title">Pengaturan</string>
+    <string name="backup_title">Cadangan &amp; Pemulihan</string>
+    <string name="reminder_title">Pengingat &amp; Notifikasi</string>
+    <string name="consultation_mode_title">Mode Konsultasi</string>
+    <string name="summary_preview_title">Ringkasan &amp; Bagikan</string>
+    <string name="hint_closed_question">Pertanyaan ini bisa dijawab ya/tidak. Coba ubah agar tenaga kesehatan menjelaskan — misalnya mulai dengan \'Mengapa…\' atau \'Bagaimana…\'.</string>
+    <string name="hint_photo_privacy">Hindari memotret dokumen berisi NIK, nomor BPJS, atau data pribadi yang tidak diperlukan.</string>
+    <string name="hint_voice_consent">Rekam percakapan hanya setelah tenaga kesehatan menyetujui.</string>
+    <string name="hint_backup_local_warning">Berkas ini tersimpan di HP ini. Jika HP rusak atau hilang, berkas ikut hilang. Salin ke Google Drive, komputer, atau tempat lain.</string>
+    <string name="hint_backup_password_warning">Kata sandi tidak disimpan dan tidak bisa dipulihkan. Jika lupa, cadangan ini tidak dapat dibuka.</string>
+    <string name="summary_disclaimer">Dibuat oleh pengguna dengan Teman Kontrol. Bukan dokumen medis resmi.</string>
 </resources>
