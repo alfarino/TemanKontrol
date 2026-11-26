@@ -190,7 +190,7 @@ class OfflineFirstSyncEngineTest {
             }
         }
 
-        val apiClient = TemanKontrolApiClient(engine = mockEngine, defaultBaseUrl = "https://api.temankontrol.unand.tech")
+        val apiClient = TemanKontrolApiClient(engine = mockEngine, defaultBaseUrl = "https://temankontrol.unand.tech")
         val storage = FakeLocalSyncStorage()
         // Pre-existing Guest consultation + tombstone created offline before login (AC-42)
         storage.consultations["c-guest"] = SyncConsultationDto(

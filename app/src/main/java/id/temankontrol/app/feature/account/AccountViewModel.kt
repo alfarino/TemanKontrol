@@ -132,7 +132,7 @@ class AccountViewModel @Inject constructor(
             _busyMessage.value = if (forceFullRestore) {
                 "Memulihkan data akun Anda…"
             } else {
-                "Menyinkronkan data ke api.temankontrol.unand.tech…"
+                "Menyinkronkan data ke temankontrol.unand.tech…"
             }
             _error.value = null
             _status.value = null

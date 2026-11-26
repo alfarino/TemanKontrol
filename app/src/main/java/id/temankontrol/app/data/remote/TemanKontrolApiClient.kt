@@ -25,7 +25,7 @@ class TemanKontrolApiClient(
 ) : Closeable {
 
     companion object {
-        const val DEFAULT_BASE_URL = "https://api.temankontrol.unand.tech"
+        const val DEFAULT_BASE_URL = "https://temankontrol.unand.tech"
     }
 
     private val json = Json {

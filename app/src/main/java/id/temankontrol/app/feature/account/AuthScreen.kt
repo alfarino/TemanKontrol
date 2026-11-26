@@ -299,7 +299,7 @@ fun AuthContent(
 
             // Optional custom server URL toggle
             TextButton(onClick = { showServerField = !showServerField }) {
-                Text(if (showServerField) "Sembunyikan Alamat Server" else "Server: api.temankontrol.unand.tech (Ubah?)")
+                Text(if (showServerField) "Sembunyikan Alamat Server" else "Server: temankontrol.unand.tech (Ubah?)")
             }
             if (showServerField) {
                 OutlinedTextField(

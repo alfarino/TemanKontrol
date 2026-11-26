@@ -160,7 +160,7 @@ fun SettingsContent(
                                 text = if (session != null) {
                                     "${session.email} • Tersambung ke unand.tech"
                                 } else {
-                                    "Ketuk untuk Masuk / Daftar akun pemulihan cloud (api.temankontrol.unand.tech)"
+                                    "Ketuk untuk Masuk / Daftar akun pemulihan cloud (temankontrol.unand.tech)"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.White.copy(alpha = 0.9f)

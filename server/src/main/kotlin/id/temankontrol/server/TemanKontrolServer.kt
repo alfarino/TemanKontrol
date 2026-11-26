@@ -246,7 +246,7 @@ private const val PRIVACY_POLICY_HTML = """
     <p><em>Diperbarui: 26 November 2026 — Selaras dengan UU PDP No. 27 Tahun 2022</em></p>
     <p>Teman Kontrol adalah aplikasi pendamping persiapan konsultasi kesehatan. Aplikasi ini <strong>bukan alat diagnosis, bukan layanan telemedicine, dan bukan layanan gawat darurat</strong>.</p>
     <h2>1. Data yang Disimpan</h2>
-    <p>Jika Anda memilih masuk (login) ke akun cloud <code>api.temankontrol.unand.tech</code>, data berikut disimpan secara aman untuk tujuan pemulihan antar perangkat (Android &amp; iPhone): alamat email, nama tampilan, jadwal kunjungan, pertanyaan terbuka, catatan jawaban/hasil, tindak lanjut, setelan alarm, serta lampiran foto &amp; rekaman suara (VN) yang Anda unggah sendiri.</p>
+    <p>Jika Anda memilih masuk (login) ke akun cloud <code>temankontrol.unand.tech</code>, data berikut disimpan secara aman untuk tujuan pemulihan antar perangkat (Android &amp; iPhone): alamat email, nama tampilan, jadwal kunjungan, pertanyaan terbuka, catatan jawaban/hasil, tindak lanjut, setelan alarm, serta lampiran foto &amp; rekaman suara (VN) yang Anda unggah sendiri.</p>
     <h2>2. Keamanan &amp; Privasi</h2>
     <p>Seluruh komunikasi menggunakan enkripsi HTTPS TLS 1.3 melalui Cloudflare Zero Trust Tunnel. Kata sandi di-hash menggunakan PBKDF2WithHmacSHA256 + random salt. Data tidak pernah dijual atau dibagikan kepada pihak ketiga.</p>
     <h2>3. Hak Hapus Akun &amp; Data Permanen</h2>

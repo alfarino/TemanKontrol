@@ -16,7 +16,7 @@ import org.koin.dsl.module
 
 class MultiplatformApiGateway(
     engine: HttpClientEngine = createHttpClientEngine(),
-    val baseUrl: String = "https://api.temankontrol.unand.tech"
+    val baseUrl: String = "https://temankontrol.unand.tech"
 ) {
     private val client = HttpClient(engine) {
         install(ContentNegotiation) {

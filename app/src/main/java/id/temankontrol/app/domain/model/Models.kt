@@ -216,7 +216,7 @@ data class AccountSession(
     val accessToken: String,
     val refreshToken: String,
     val lastSyncAtMillis: Long? = null,
-    val serverBaseUrl: String = "https://api.temankontrol.unand.tech"
+    val serverBaseUrl: String = "https://temankontrol.unand.tech"
 )
 
 data class SyncSummaryResult(

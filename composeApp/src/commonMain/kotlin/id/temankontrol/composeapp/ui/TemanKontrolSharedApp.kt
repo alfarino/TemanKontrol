@@ -82,7 +82,7 @@ fun TemanKontrolSharedPreviewApp(
                             Icon(Icons.Default.CloudDone, contentDescription = null, tint = Color.White)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Sinkronisasi Cloud • api.temankontrol.unand.tech",
+                                text = "Sinkronisasi Cloud • temankontrol.unand.tech",
                                 style = MaterialTheme.typography.labelLarge,
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
