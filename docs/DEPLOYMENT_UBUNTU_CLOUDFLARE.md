@@ -29,9 +29,9 @@ Panduan ini menyiapkan container **`temankontrol-api`** (Ktor + **SQLite WAL Mod
    docker compose up -d --build
    ```
 
-4. Verifikasi healthcheck container & SQLite WAL Mode:
+4. Verifikasi healthcheck container & SQLite WAL Mode (memakai port host **8085** agar tidak bentrok dengan port 8080):
    ```bash
-   curl -s http://127.0.0.1:8080/health
+   curl -s http://127.0.0.1:8085/health
    # Output diharapkan: {"status":"UP","service":"temankontrol-api","database":"sqlite","journalMode":"wal",...}
    ```
 
@@ -48,10 +48,10 @@ Di **Cloudflare Zero Trust Dashboard -> Networks -> Tunnels -> pilih tunnel serv
 
 | Subdomain | Service Type | URL |
 |---|---|---|
-| `api.temankontrol.unand.tech` | `HTTP` | `http://127.0.0.1:8080` |
-| `temankontrol.unand.tech` | `HTTP` | `http://127.0.0.1:8080` |
+| `api.temankontrol.unand.tech` | `HTTP` | `http://127.0.0.1:8085` |
+| `temankontrol.unand.tech` | `HTTP` | `http://127.0.0.1:8085` |
 
-> Pastikan di menu **SSL/TLS** Cloudflare mode diset ke **Full (Strict)**, dan tidak perlu membuka port `8080` di firewall/UFW publik karena `cloudflared` terhubung keluar secara terenkripsi.
+> Pastikan di menu **SSL/TLS** Cloudflare mode diset ke **Full (Strict)**, dan tidak perlu membuka port `8085` di firewall/UFW publik karena `cloudflared` terhubung keluar secara terenkripsi.
 
 Uji dari internet:
 - `https://api.temankontrol.unand.tech/health`

@@ -3,11 +3,11 @@
 #
 # 1) Subdomain API:
 #    Hostname : api.temankontrol.unand.tech
-#    Service  : http://127.0.0.1:8080   (atau http://temankontrol-api:8080 jika cloudflared 1 network Docker)
+#    Service  : http://127.0.0.1:8085   (hindari port 8080 yang dipakai phpmyadmin)
 #
 # 2) Subdomain Landing & Privacy Policy (UU PDP / App Store / Play Store):
 #    Hostname : temankontrol.unand.tech
-#    Service  : http://127.0.0.1:8080
+#    Service  : http://127.0.0.1:8085
 #
 # Jika memakai config.yml lokal di Ubuntu Server:
 tunnel: "<TUNNEL-UUID-ANDA>"
@@ -15,7 +15,7 @@ credentials-file: "/etc/cloudflared/<TUNNEL-UUID-ANDA>.json"
 
 ingress:
   - hostname: api.temankontrol.unand.tech
-    service: http://127.0.0.1:8080
+    service: http://127.0.0.1:8085
   - hostname: temankontrol.unand.tech
-    service: http://127.0.0.1:8080
+    service: http://127.0.0.1:8085
   - service: http_status:404

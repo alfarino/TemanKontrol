@@ -17,7 +17,7 @@ services:
       - ./data/attachments:/data/attachments
       - ./data/backups:/data/backups
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${TEMANKONTROL_HOST_PORT:-8085}:8080"
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
       interval: 30s
