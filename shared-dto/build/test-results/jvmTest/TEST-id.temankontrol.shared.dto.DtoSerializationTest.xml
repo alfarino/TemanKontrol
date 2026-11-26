@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="DtoSerializationTest[jvm]" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-26T07:20:26.570Z" hostname="ALPHA-DSKTP1385" time="0.046">
+  <properties/>
+  <testcase name="syncPushRequest_roundTripSerialization[jvm]" classname="id.temankontrol.shared.dto.DtoSerializationTest" time="0.043"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

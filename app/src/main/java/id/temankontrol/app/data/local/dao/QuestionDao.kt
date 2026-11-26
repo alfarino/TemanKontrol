@@ -26,6 +26,9 @@ interface QuestionDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(question: QuestionEntity): Long
 
+    @Upsert
+    suspend fun upsertSync(question: QuestionEntity): Long
+
     @Update
     suspend fun update(question: QuestionEntity): Int
 

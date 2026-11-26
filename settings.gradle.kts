@@ -24,3 +24,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "TemanKontrol"
 include(":app")
+include(":composeApp")
+include(":shared-dto")
+include(":server")

@@ -1,0 +1,25 @@
+<variant
+    name="androidMain"
+    package="id.temankontrol.composeapp"
+    minSdkVersion="30"
+    targetSdkVersion="30"
+    mergedManifest="build\intermediates\merged_manifest\androidMain\processAndroidMainManifest\AndroidManifest.xml"
+    partialResultsDir="build\intermediates\unit_test_lint_partial_results\androidMain\lintAnalyzeAndroidHostTest\out"
+    desugaredMethodsFiles="C:\Users\User\.gradle\caches\9.6.0\transforms\02a8b712d5d5acc0e57c07766be0f4ae\transformed\D8BackportedDesugaredMethods.txt">
+  <buildFeatures/>
+  <sourceProviders>
+  </sourceProviders>
+  <testSourceProviders>
+    <sourceProvider
+        manifests="src\androidHostTest\AndroidManifest.xml"
+        javaDirectories="src\androidHostTest\kotlin;src\commonTest\kotlin"
+        keepRulesDirectories="src\androidHostTest\keepRules;src\commonTest\keepRules"
+        aarKeepRulesDirectories="src\androidHostTest\aarKeepRules;src\commonTest\aarKeepRules"
+        unitTest="true"/>
+  </testSourceProviders>
+  <testFixturesSourceProviders>
+  </testFixturesSourceProviders>
+  <artifact
+      type="UNIT_TEST">
+  </artifact>
+</variant>

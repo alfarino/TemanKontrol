@@ -11,6 +11,8 @@ import id.temankontrol.app.domain.model.AttachmentKind
 import id.temankontrol.app.domain.model.AttachmentTarget
 import id.temankontrol.app.domain.model.ConsultationId
 import id.temankontrol.app.domain.repository.AttachmentRepository
+import id.temankontrol.app.domain.repository.PreferencesRepository
+import id.temankontrol.app.domain.model.SyncEntityType
 import id.temankontrol.app.domain.validation.Validation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -22,7 +24,8 @@ import javax.inject.Singleton
 @Singleton
 class RoomAttachmentRepository @Inject constructor(
     private val attachmentDao: AttachmentDao,
-    private val mediaManager: MediaAttachmentManager
+    private val mediaManager: MediaAttachmentManager,
+    private val preferencesRepository: PreferencesRepository
 ) : AttachmentRepository {
 
     companion object {
@@ -111,6 +114,12 @@ class RoomAttachmentRepository @Inject constructor(
             val rows = attachmentDao.delete(attachmentId)
             if (rows > 0) {
                 existing?.let { mediaManager.deleteFile(it.consultationId, it.fileName) }
+                preferencesRepository.recordSyncTombstone(
+                    SyncEntityType.ATTACHMENT,
+                    attachmentId,
+                    Instant.now().toEpochMilli()
+                )
+                preferencesRepository.markDataChanged()
                 AppResult.Success(Unit)
             } else {
                 AppResult.Failure(AppError.NotFound)

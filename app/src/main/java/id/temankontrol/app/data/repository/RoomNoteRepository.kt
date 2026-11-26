@@ -7,6 +7,7 @@ import id.temankontrol.app.data.local.entity.ConsultationNoteEntity
 import id.temankontrol.app.data.local.mapper.toDomain
 import id.temankontrol.app.domain.model.*
 import id.temankontrol.app.domain.repository.NoteRepository
+import id.temankontrol.app.domain.repository.PreferencesRepository
 import id.temankontrol.app.domain.validation.Validation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -16,7 +17,8 @@ import javax.inject.Singleton
 
 @Singleton
 class RoomNoteRepository @Inject constructor(
-    private val noteDao: NoteDao
+    private val noteDao: NoteDao,
+    private val preferencesRepository: PreferencesRepository
 ) : NoteRepository {
 
     override fun observe(id: ConsultationId): Flow<ConsultationNote?> {
@@ -46,7 +48,15 @@ class RoomNoteRepository @Inject constructor(
 
     override suspend fun delete(id: ConsultationId): AppResult<Unit> {
         return try {
-            noteDao.delete(id.value)
+            val rows = noteDao.delete(id.value)
+            if (rows > 0) {
+                preferencesRepository.recordSyncTombstone(
+                    SyncEntityType.NOTE,
+                    id.value,
+                    Instant.now().toEpochMilli()
+                )
+                preferencesRepository.markDataChanged()
+            }
             AppResult.Success(Unit)
         } catch (e: Exception) {
             AppResult.Failure(AppError.Storage)

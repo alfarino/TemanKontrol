@@ -56,6 +56,12 @@ interface ConsultationDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(consultation: ConsultationEntity): Long
 
+    @Upsert
+    suspend fun upsertSync(consultation: ConsultationEntity): Long
+
+    @Query("DELETE FROM consultations")
+    suspend fun deleteAll(): Int
+
     @Update
     suspend fun update(consultation: ConsultationEntity): Int
 

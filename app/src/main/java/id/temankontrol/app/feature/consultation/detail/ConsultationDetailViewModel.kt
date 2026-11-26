@@ -100,6 +100,16 @@ class ConsultationDetailViewModel @Inject constructor(
         }
     }
 
+    fun saveInlineAnswer(questionId: String, answer: String?) {
+        viewModelScope.launch {
+            val cleaned = answer?.trim()?.ifBlank { null }
+            questionRepository.updateAnswer(questionId, cleaned)
+            if (cleaned != null) {
+                questionRepository.setDiscussed(questionId, true)
+            }
+        }
+    }
+
     fun toggleFollowUpCompleted(actionId: String, completed: Boolean) {
         viewModelScope.launch {
             followUpRepository.setCompleted(actionId, completed)

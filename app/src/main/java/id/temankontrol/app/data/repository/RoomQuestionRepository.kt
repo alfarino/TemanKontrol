@@ -10,6 +10,7 @@ import id.temankontrol.app.data.local.mapper.toDomain
 import id.temankontrol.app.data.media.MediaAttachmentManager
 import id.temankontrol.app.domain.model.*
 import id.temankontrol.app.domain.repository.CopyQuestionsResult
+import id.temankontrol.app.domain.repository.PreferencesRepository
 import id.temankontrol.app.domain.repository.QuestionRepository
 import id.temankontrol.app.domain.validation.Validation
 import kotlinx.coroutines.flow.Flow
@@ -24,7 +25,8 @@ import javax.inject.Singleton
 class RoomQuestionRepository @Inject constructor(
     private val questionDao: QuestionDao,
     private val attachmentDao: AttachmentDao,
-    private val mediaManager: MediaAttachmentManager
+    private val mediaManager: MediaAttachmentManager,
+    private val preferencesRepository: PreferencesRepository
 ) : QuestionRepository {
 
     override fun observeByConsultation(id: ConsultationId): Flow<List<Question>> {
@@ -159,7 +161,13 @@ class RoomQuestionRepository @Inject constructor(
             val qAttachments = attachmentDao.getByQuestionId(questionId)
             val rows = questionDao.delete(questionId)
             if (rows > 0) {
-                qAttachments.forEach { mediaManager.deleteFile(it.consultationId, it.fileName) }
+                val nowMs = Instant.now().toEpochMilli()
+                qAttachments.forEach {
+                    mediaManager.deleteFile(it.consultationId, it.fileName)
+                    preferencesRepository.recordSyncTombstone(SyncEntityType.ATTACHMENT, it.id, nowMs)
+                }
+                preferencesRepository.recordSyncTombstone(SyncEntityType.QUESTION, questionId, nowMs)
+                preferencesRepository.markDataChanged()
                 AppResult.Success(Unit)
             } else {
                 AppResult.Failure(AppError.NotFound)

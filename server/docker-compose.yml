@@ -1,0 +1,25 @@
+services:
+  temankontrol-api:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    container_name: temankontrol-api
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: "0.50"
+    environment:
+      PORT: "8080"
+      DB_PATH: "/data/db/temankontrol.db"
+      MEDIA_DIR: "/data/attachments"
+      JWT_SECRET: "${TEMANKONTROL_JWT_SECRET:-change-this-in-ubuntu-env}"
+    volumes:
+      - ./data/db:/data/db
+      - ./data/attachments:/data/attachments
+      - ./data/backups:/data/backups
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

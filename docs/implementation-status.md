@@ -1,9 +1,9 @@
 # Teman Kontrol Implementation Status
 
-Dokumen ini melacak status audit, keputusan, dan implementasi Teman Kontrol berdasarkan **PRD Final ([PRD.md](PRD.md) v2.0)**.
+Dokumen ini melacak status audit, keputusan, dan implementasi Teman Kontrol berdasarkan **PRD Final ([PRD.md](PRD.md) v3.0 Master Plan)**.
 
-> **Terakhir diperbarui:** 17 Nov 2026 (Seluruh fase hingga **Phase 10 Rilis Produksi v2.0.0** selesai dan terverifikasi).
-> **Ringkasan:** Seluruh scope **PRD v2.0 Final** (F-01 s/d F-17, SCR-01 s/d SCR-17, Room v1→v2→v3, DataStore persisten, `.tkbackup` AES-256-GCM, `AlarmManager` notifikasi lokal privat, media foto/VN, `BiometricPrompt`, PDF generator, dan release signing keystore) telah selesai dan lulus pengujian.
+> **Terakhir diperbarui:** 26 Nov 2026 (Pembaruan Master Plan **PRD v3.0**: Login & Cloud Sync Self-Hosted di Private Ubuntu Server + Cloudflare `unand.tech`, Perbaikan Bug Notifikasi menjadi Alarm Berbunyi Nyaring, Opsi 2A KMP Android + iPhone/iOS, serta Perombakan Besar-Besaran UI/UX v3.0).
+> **Ringkasan:** Seluruh fase **v1.0–v3.0 (Phase 0 s/d Phase 16)** telah selesai, diuji di setiap transisi fase, dan berhasil memaketkan **`app-debug.apk` & `app-release.apk` v3.0.0**.
 
 ### Hasil verifikasi akhir (17 Nov 2026)
 
@@ -34,6 +34,12 @@ Dokumen ini melacak status audit, keputusan, dan implementasi Teman Kontrol berd
 | Phase 8D | Engine Pengingat Lokal (`AlarmManager`) | PASS | `ReminderPlanner`, `ReminderScheduler`, `ReminderReceiver`, `BootRescheduleReceiver`, 3 notification channel, `VISIBILITY_PRIVATE`, deep-link & izin kontekstual `POST_NOTIFICATIONS`. |
 | Phase 9 | Verifikasi End-to-End & Uji Perangkat (`Pixel_5` AVD) | PASS | 63 unit test + 10/10 instrumented test di AVD (termasuk `MigrationTest` v1→v3 & `NoticeScreenTest` dengan Espresso 3.7.0), `lintDebug` 0 error, audit manifest. |
 | Phase 10 | Rilis Produksi v2.0.0 | PASS | Keystore rilis di luar repo (`keystore.properties` di-gitignore), `versionCode = 2`, `versionName = "2.0.0"`, R8 + shrink resources, `app-release.apk` **8,26 MiB** (< 10 MB). |
+| Phase 11 | **v3.0** — Perbaikan Bug Notifikasi & Engine Alarm Berbunyi Nyaring (`F-12 v3`) | **PASS** | `AlarmManager.setAlarmClock` (+ fallback exact), `AlarmSoundPlayer` (`USAGE_ALARM` + `TYPE_ALARM` looping + getaran), Full-Screen Alarm Alert `AlarmAlertActivity` (`SCR-20`) + Snooze 10 menit, jadwal H-1, -2 jam, -30 menit, Jam-H (`0m`), & offset kustom, perbaikan *race condition* izin & `reminder_log`, serta tombol *Tes Bunyi Alarm Sekarang* (`test` 64/64 PASS & `lintDebug` 0 error). |
+| Phase 12 | **v3.0** — Perombakan Besar-Besaran UI/UX ("Warm Healthcare Companion") | **PASS** | Design Tokens v3.0 (Hero Teal-Emerald Gradient + Warm Coral + Soft Porcelain Mint), 4-Tab Bottom Nav (`Beranda`, `Jadwal`, `Alarm`, `Akun`), Beranda Dashboard baru (Hero Countdown, Readiness Bar %, Bento 2×2 Quick Actions, Cloud Sync Pill), Detail Kunjungan *3-Step Guided Stepper* (Persiapan → Saat Kontrol → Hasil & Aksi) dengan input jawaban *inline*, Pencarian Cepat di tab Jadwal, serta visual *AudioWaveformBars* untuk VN (`test` 65/65 PASS & `lintDebug` 0 error). |
+| Phase 13 | **v3.0** — Backend Self-Hosted (`server/`) di Ubuntu Server + Cloudflare (`unand.tech`) | **PASS** | Modul `:shared-dto` + `:server` (Ktor Netty + **SQLite WAL Mode**, PBKDF2 + HMAC-JWT, `/health`, `/privacy`, `/v1/auth/*`, `/v1/sync/push`, `/v1/sync/pull`, `/v1/attachments/{id}/file`, `DELETE /v1/account`, `Dockerfile`, `docker-compose.yml` `mem_limit: 256m`, `cloudflared-config.example.yml`, `backup-sqlite.sh`; integrasi E2E `:shared-dto:jvmTest :server:test` PASS). |
+| Phase 14 | **v3.0** — Fitur Login, Akun & Offline-First Cloud Sync (`F-18`) | **PASS** | Layar Login/Register/Reset OTP (`AuthScreen` `SCR-18`), Profil & Sync (`AccountSyncScreen` `SCR-19`), `TemanKontrolApiClient`, `OfflineFirstSyncEngine` (merge Guest → Account, pull/push LWW, sync tombstones, upload/download Foto/VN, Hapus Akun), izin `INTERNET`, dan `OfflineFirstSyncEngineTest` + `:app:testDebugUnitTest` + `:app:lintDebug` PASS. |
+| Phase 15 | **v3.0** — Migrasi ke Opsi 2A: KMP + Compose Multiplatform (Android & iPhone/iOS) | **PASS** | Modul `:composeApp` (`commonMain`, `androidMain`, `jvmMain`, `iosMain`) + `:iosApp` (`iOSApp.swift`, `ContentView.swift`, `Info.plist`), Koin Multiplatform, `ComposeMultiplatform 1.10.0` + AGP 9 `android-kmp-library`, adapter iOS (`UNUserNotificationCenter` `.caf`, `LAContext` FaceID, `UIGraphicsPDFRenderer`), teruji lewat `:composeApp:jvmTest` & `:composeApp:testAndroidHostTest`. |
+| Phase 16 | **v3.0** — Verifikasi End-to-End, Deployment `unand.tech`, & Release v3.0.0 | **PASS** | Panduan deployment Ubuntu Server + Cloudflare Tunnel (`docs/DEPLOYMENT_UBUNTU_CLOUDFLARE.md`), `versionCode = 3` / `versionName = "3.0.0"`, ProGuard R8 `:shared-dto` & `:composeApp`, `lintDebug` & `lintVitalRelease` 0 error, serta `assembleDebug` & `assembleRelease` v3.0.0 **BUILD SUCCESSFUL**. |
 
 ---
 

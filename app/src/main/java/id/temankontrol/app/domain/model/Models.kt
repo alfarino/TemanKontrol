@@ -151,6 +151,10 @@ data class Attachment(
 data class ReminderSettings(
     val visitReminderEnabled: Boolean = true,
     val visitReminderHour: Int = 19,
+    val visitThirtyMinBeforeEnabled: Boolean = true,
+    val visitAtTimeEnabled: Boolean = true,
+    val customLeadMinutes: Int? = null,
+    val alarmSoundModeEnabled: Boolean = true,
     val prepareReminderEnabled: Boolean = true,
     val followUpReminderEnabled: Boolean = true,
     val followUpReminderHour: Int = 8,
@@ -186,4 +190,39 @@ data class NoteInput(
 data class FollowUpInput(
     val text: String,
     val dueDate: LocalDate? = null
+)
+
+@kotlinx.serialization.Serializable
+enum class SyncEntityType {
+    CONSULTATION,
+    QUESTION,
+    NOTE,
+    FOLLOW_UP,
+    ATTACHMENT
+}
+
+@kotlinx.serialization.Serializable
+data class SyncTombstone(
+    val entityType: SyncEntityType,
+    val entityId: String,
+    val deletedAtMillis: Long
+)
+
+@kotlinx.serialization.Serializable
+data class AccountSession(
+    val userId: String,
+    val email: String,
+    val displayName: String,
+    val accessToken: String,
+    val refreshToken: String,
+    val lastSyncAtMillis: Long? = null,
+    val serverBaseUrl: String = "https://api.temankontrol.unand.tech"
+)
+
+data class SyncSummaryResult(
+    val pushedRecords: Int,
+    val pulledRecords: Int,
+    val uploadedFiles: Int,
+    val downloadedFiles: Int,
+    val syncedAtMillis: Long
 )

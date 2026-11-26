@@ -8,7 +8,6 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -27,12 +26,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.temankontrol.app.R
 import id.temankontrol.app.core.designsystem.component.AppScaffold
 import id.temankontrol.app.core.designsystem.component.AppTopBar
 import id.temankontrol.app.core.designsystem.component.SectionCard
+import id.temankontrol.app.data.reminder.AlarmSoundPlayer
 import id.temankontrol.app.domain.model.ReminderSettings
 import id.temankontrol.app.ui.theme.StatusWarningDark
 import id.temankontrol.app.ui.theme.StatusWarningLight
@@ -44,12 +45,15 @@ fun ReminderSettingsScreen(
     viewModel: ReminderSettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val activeAlarm by AlarmSoundPlayer.activeAlarm.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     val notifPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
-        viewModel.setHasNotificationPermission(granted || NotificationManagerCompat.from(context).areNotificationsEnabled())
+        viewModel.setHasNotificationPermission(
+            granted || NotificationManagerCompat.from(context).areNotificationsEnabled()
+        )
     }
 
     fun requestNotifPermissionIfNeeded() {
@@ -71,12 +75,33 @@ fun ReminderSettingsScreen(
 
     ReminderSettingsContent(
         uiState = uiState,
+        isAlarmCurrentlyRinging = activeAlarm != null,
         onNavigateBack = onNavigateBack,
+        onToggleAlarmSoundMode = {
+            if (it) requestNotifPermissionIfNeeded()
+            viewModel.setAlarmSoundModeEnabled(it)
+        },
+        onTriggerTestAlarm = {
+            requestNotifPermissionIfNeeded()
+            viewModel.triggerTestAlarm()
+        },
+        onStopRingingAlarm = {
+            AlarmSoundPlayer.stopRinging(context)
+        },
         onToggleVisit = {
             if (it) requestNotifPermissionIfNeeded()
             viewModel.setVisitReminderEnabled(it)
         },
         onSelectVisitHour = viewModel::setVisitReminderHour,
+        onToggleVisitThirtyMin = {
+            if (it) requestNotifPermissionIfNeeded()
+            viewModel.setVisitThirtyMinBeforeEnabled(it)
+        },
+        onToggleVisitAtTime = {
+            if (it) requestNotifPermissionIfNeeded()
+            viewModel.setVisitAtTimeEnabled(it)
+        },
+        onSelectCustomLeadMinutes = viewModel::setCustomLeadMinutes,
         onTogglePrepare = {
             if (it) requestNotifPermissionIfNeeded()
             viewModel.setPrepareReminderEnabled(it)
@@ -119,7 +144,14 @@ fun ReminderSettingsContent(
     onToggleShowTitle: (Boolean) -> Unit,
     onOpenAppNotificationSettings: () -> Unit,
     onOpenBatterySettings: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isAlarmCurrentlyRinging: Boolean = false,
+    onToggleAlarmSoundMode: (Boolean) -> Unit = {},
+    onTriggerTestAlarm: () -> Unit = {},
+    onStopRingingAlarm: () -> Unit = {},
+    onToggleVisitThirtyMin: (Boolean) -> Unit = {},
+    onToggleVisitAtTime: (Boolean) -> Unit = {},
+    onSelectCustomLeadMinutes: (Int?) -> Unit = {}
 ) {
     val isDark = isSystemInDarkTheme()
     val warnBg = if (isDark) StatusWarningDark.copy(alpha = 0.2f) else StatusWarningLight.copy(alpha = 0.14f)
@@ -165,7 +197,7 @@ fun ReminderSettingsContent(
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
                         Text(
-                            text = "Aktifkan agar pengingat muncul. Aplikasi tetap berfungsi penuh tanpa notifikasi.",
+                            text = "Aktifkan agar pengingat dan alarm kunjungan muncul tepat waktu.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
@@ -176,44 +208,116 @@ fun ReminderSettingsContent(
                 }
             }
 
-            // Info offline-only local notification
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    verticalAlignment = Alignment.Top,
-                    modifier = Modifier.padding(14.dp)
+            if (isAlarmCurrentlyRinging) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AlarmOn,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Alarm sedang berbunyi...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Button(onClick = onStopRingingAlarm) {
+                            Text("Matikan")
+                        }
+                    }
+                }
+            }
+
+            // Mode Alarm Berbunyi Nyaring & Uji Coba (F-12 v3)
+            SectionCard(title = "Mode Alarm Berbunyi Nyaring") {
+                ReminderToggleItem(
+                    title = "Bunyikan Seperti Alarm (Weker)",
+                    subtitle = "Menggunakan jalur suara Alarm HP (USAGE_ALARM), getaran berulang, dan layar penuh dengan opsi Tunda 10 Menit (Snooze)",
+                    checked = uiState.alarmSoundModeEnabled,
+                    onCheckedChange = onToggleAlarmSoundMode
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = onTriggerTestAlarm,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Alarm,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
+                        imageVector = Icons.Default.VolumeUp,
+                        contentDescription = null
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Semua pengingat dijadwalkan secara lokal di HP ini (100% offline, tanpa internet & server).",
-                        style = MaterialTheme.typography.bodySmall
+                        text = "Tes Bunyi Alarm Sekarang",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
 
-            // Jenis Pengingat
-            SectionCard(title = "Jenis Pengingat") {
+            // Jenis & Waktu Pengingat
+            SectionCard(title = "Jadwal & Waktu Pengingat") {
                 ReminderToggleItem(
-                    title = "Pengingat Kunjungan",
-                    subtitle = "Muncul H-1 pukul ${formatHour(uiState.visitReminderHour)} dan 2 jam sebelum jadwal",
+                    title = "Pengingat Kunjungan Utama",
+                    subtitle = "Aktifkan alarm/pengingat otomatis untuk semua kunjungan Terjadwal",
                     checked = uiState.visitReminderEnabled,
                     onCheckedChange = onToggleVisit
                 )
                 if (uiState.visitReminderEnabled) {
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Jam pengingat H-1 (sehari sebelum kunjungan) & 2 jam sebelum:",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
                     HourChipRow(
                         selectedHour = uiState.visitReminderHour,
                         options = listOf(18, 19, 20),
                         onSelectHour = onSelectVisitHour
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    ReminderToggleItem(
+                        title = "30 Menit Sebelum Kunjungan",
+                        subtitle = "Berbunyi 30 menit sebelum jadwal konsultasi dimulai",
+                        checked = uiState.visitThirtyMinBeforeEnabled,
+                        onCheckedChange = onToggleVisitThirtyMin
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    ReminderToggleItem(
+                        title = "Tepat Saat Jam Kunjungan (Jam-H)",
+                        subtitle = "Berbunyi tepat pada menit jadwal kunjungan Anda",
+                        checked = uiState.visitAtTimeEnabled,
+                        onCheckedChange = onToggleVisitAtTime
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = "Pengingat Tambahan (Offset Kustom):",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    CustomLeadChipRow(
+                        selectedMinutes = uiState.customLeadMinutes,
+                        onSelectMinutes = onSelectCustomLeadMinutes
                     )
                 }
 
@@ -265,7 +369,7 @@ fun ReminderSettingsContent(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "Pratinjau Tampilan Notifikasi:",
+                    text = "Pratinjau Tampilan Alarm & Notifikasi:",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -282,7 +386,11 @@ fun ReminderSettingsContent(
                         modifier = Modifier.padding(12.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.NotificationsActive,
+                            imageVector = if (uiState.alarmSoundModeEnabled) {
+                                Icons.Default.Alarm
+                            } else {
+                                Icons.Default.NotificationsActive
+                            },
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary
                         )
@@ -324,13 +432,13 @@ fun ReminderSettingsContent(
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Agar pengingat tepat waktu",
+                        text = "Agar alarm selalu tepat waktu",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = warnFg
                     )
                     Text(
-                        text = "Pada beberapa HP (mis. Xiaomi/MIUI), izinkan Teman Kontrol tanpa pembatasan baterai.",
+                        text = "Teman Kontrol memakai AlarmClock prioritas tinggi. Pada HP Xiaomi/MIUI, pastikan penghemat baterai tidak membatasi aplikasi di latar belakang.",
                         style = MaterialTheme.typography.bodySmall,
                         color = warnFg
                     )
@@ -391,6 +499,31 @@ private fun HourChipRow(
                 selected = selectedHour == hour,
                 onClick = { onSelectHour(hour) },
                 label = { Text(formatHour(hour)) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun CustomLeadChipRow(
+    selectedMinutes: Int?,
+    onSelectMinutes: (Int?) -> Unit
+) {
+    val options = listOf(
+        null to "Tidak ada",
+        5 to "5 mnt",
+        15 to "15 mnt",
+        60 to "1 jam"
+    )
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        options.forEach { (minutes, label) ->
+            FilterChip(
+                selected = selectedMinutes == minutes,
+                onClick = { onSelectMinutes(minutes) },
+                label = { Text(label) }
             )
         }
     }

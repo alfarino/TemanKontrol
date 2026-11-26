@@ -2,13 +2,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Enforce offline-only per DEC-011 and AC-19 -->
-    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <!-- Account login & Offline-First Cloud Sync via api.temankontrol.unand.tech (DEC-033) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Voice Note recording (requested contextually in F-13) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <!-- Local reminders (requested contextually in F-12) -->
+    <!-- Local reminders & Alarm-Grade Engine (F-12 v3) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:name=".TemanKontrolApp"
@@ -32,6 +38,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".feature.reminder.AlarmAlertActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:showWhenLocked="true"
+            android:theme="@style/Theme.TemanKontrol"
+            android:turnScreenOn="true" />
+
         <receiver
             android:name=".data.reminder.ReminderReceiver"
             android:exported="false" />

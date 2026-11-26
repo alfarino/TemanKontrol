@@ -55,7 +55,16 @@
 -keep class id.temankontrol.app.domain.model.** { *; }
 -keep class id.temankontrol.app.data.backup.** { *; }
 -keep class id.temankontrol.app.data.reminder.** { *; }
+-keep class id.temankontrol.shared.dto.** { *; }
+-keep class id.temankontrol.composeapp.** { *; }
 -keep class androidx.biometric.** { *; }
+
+# Ktor / OkHttp / Coroutines reflection safety
+-dontwarn io.ktor.**
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-dontwarn org.slf4j.**
+-dontwarn kotlinx.atomicfu.**
 
 # ===================================================================
 # Hilt / Dagger Dependency Injection

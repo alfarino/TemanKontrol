@@ -141,6 +141,11 @@ class RoomConsultationRepository @Inject constructor(
             val rows = consultationDao.delete(id.value)
             if (rows > 0) {
                 mediaManager.deleteConsultationFolder(id.value)
+                preferencesRepository.recordSyncTombstone(
+                    SyncEntityType.CONSULTATION,
+                    id.value,
+                    Instant.now().toEpochMilli()
+                )
                 preferencesRepository.markDataChanged()
                 reminderScheduler.rescheduleAll()
                 AppResult.Success(Unit)

@@ -1,0 +1,13 @@
+-- Merging decision tree log ---
+manifest
+ADDED from D:\User\Documents\TemanKontrol\composeApp\build\intermediates\tmp\ProcessLibraryManifest\tempAndroidManifest7769317377668593187.xml:2:13-83
+INJECTED from D:\User\Documents\TemanKontrol\composeApp\build\intermediates\tmp\ProcessLibraryManifest\tempAndroidManifest7769317377668593187.xml:2:13-83
+	package
+		INJECTED from D:\User\Documents\TemanKontrol\composeApp\build\intermediates\tmp\ProcessLibraryManifest\tempAndroidManifest7769317377668593187.xml
+	xmlns:android
+		ADDED from D:\User\Documents\TemanKontrol\composeApp\build\intermediates\tmp\ProcessLibraryManifest\tempAndroidManifest7769317377668593187.xml:2:23-81
+uses-sdk
+INJECTED from D:\User\Documents\TemanKontrol\composeApp\build\intermediates\tmp\ProcessLibraryManifest\tempAndroidManifest7769317377668593187.xml reason: use-sdk injection requested
+INJECTED from D:\User\Documents\TemanKontrol\composeApp\build\intermediates\tmp\ProcessLibraryManifest\tempAndroidManifest7769317377668593187.xml
+	android:minSdkVersion
+		INJECTED from D:\User\Documents\TemanKontrol\composeApp\build\intermediates\tmp\ProcessLibraryManifest\tempAndroidManifest7769317377668593187.xml

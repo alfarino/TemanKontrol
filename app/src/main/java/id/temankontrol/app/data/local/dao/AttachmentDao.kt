@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import id.temankontrol.app.data.local.entity.AttachmentEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -30,6 +31,9 @@ interface AttachmentDao {
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(attachment: AttachmentEntity): Long
+
+    @Upsert
+    suspend fun upsertSync(attachment: AttachmentEntity): Long
 
     @Query("UPDATE attachments SET caption = :caption WHERE id = :id")
     suspend fun updateCaption(id: String, caption: String?): Int

@@ -1,4 +1,4 @@
-﻿package id.temankontrol.app.feature.history
+package id.temankontrol.app.feature.history
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -13,6 +13,7 @@ import javax.inject.Inject
 
 data class HistoryUiState(
     val filter: StatusFilter = StatusFilter.ALL,
+    val searchQuery: String = "",
     val consultations: List<ConsultationSummary> = emptyList(),
     val isLoading: Boolean = true
 )
@@ -32,15 +33,29 @@ class HistoryViewModel @Inject constructor(
     }
 
     private val _currentFilter = MutableStateFlow(initialFilter)
+    private val _searchQuery = MutableStateFlow("")
 
-    val uiState: StateFlow<HistoryUiState> = _currentFilter.flatMapLatest { filter ->
-        consultationRepository.observeHistory(filter).map { list ->
-            HistoryUiState(
-                filter = filter,
-                consultations = list,
-                isLoading = false
-            )
+    val uiState: StateFlow<HistoryUiState> = combine(
+        _currentFilter.flatMapLatest { filter ->
+            consultationRepository.observeHistory(filter).map { filter to it }
+        },
+        _searchQuery
+    ) { (filter, list), query ->
+        val trimmed = query.trim()
+        val filteredList = if (trimmed.isEmpty()) {
+            list
+        } else {
+            list.filter { item ->
+                item.title.contains(trimmed, ignoreCase = true) ||
+                    (item.facilityName?.contains(trimmed, ignoreCase = true) == true)
+            }
         }
+        HistoryUiState(
+            filter = filter,
+            searchQuery = query,
+            consultations = filteredList,
+            isLoading = false
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -49,5 +64,9 @@ class HistoryViewModel @Inject constructor(
 
     fun setFilter(filter: StatusFilter) {
         _currentFilter.value = filter
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 }

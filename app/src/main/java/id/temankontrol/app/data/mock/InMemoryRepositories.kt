@@ -648,12 +648,16 @@ class InMemoryPreferencesRepository @Inject constructor(
     private val _appLockSettings = kotlinx.coroutines.flow.MutableStateFlow(AppLockSettings())
     private val _lastBackupAt = kotlinx.coroutines.flow.MutableStateFlow<Instant?>(null)
     private val _dataChanged = kotlinx.coroutines.flow.MutableStateFlow(true)
+    private val _accountSession = kotlinx.coroutines.flow.MutableStateFlow<AccountSession?>(null)
+    private val _tombstones = kotlinx.coroutines.flow.MutableStateFlow<List<SyncTombstone>>(emptyList())
 
     override val noticeAccepted: Flow<Boolean> = dataStore.noticeAccepted
     override val reminderSettings: Flow<ReminderSettings> = _reminderSettings
     override val appLockSettings: Flow<AppLockSettings> = _appLockSettings
     override val lastBackupAt: Flow<Instant?> = _lastBackupAt
     override val dataChangedSinceBackup: Flow<Boolean> = _dataChanged
+    override val accountSession: Flow<AccountSession?> = _accountSession
+    override val pendingTombstones: Flow<List<SyncTombstone>> = _tombstones
 
     override suspend fun setNoticeAccepted(): AppResult<Unit> {
         dataStore.setNoticeAccepted(true)
@@ -682,6 +686,31 @@ class InMemoryPreferencesRepository @Inject constructor(
 
     override suspend fun markDataChanged(): AppResult<Unit> {
         _dataChanged.value = true
+        return AppResult.Success(Unit)
+    }
+
+    override suspend fun saveAccountSession(session: AccountSession?): AppResult<Unit> {
+        _accountSession.value = session
+        return AppResult.Success(Unit)
+    }
+
+    override suspend fun updateLastSyncAt(epochMillis: Long): AppResult<Unit> {
+        _accountSession.value = _accountSession.value?.copy(lastSyncAtMillis = epochMillis)
+        return AppResult.Success(Unit)
+    }
+
+    override suspend fun recordSyncTombstone(
+        entityType: SyncEntityType,
+        entityId: String,
+        deletedAtMillis: Long
+    ): AppResult<Unit> {
+        _tombstones.value = _tombstones.value.filterNot { it.entityType == entityType && it.entityId == entityId } +
+            SyncTombstone(entityType, entityId, deletedAtMillis)
+        return AppResult.Success(Unit)
+    }
+
+    override suspend fun clearSyncTombstones(entityIds: Set<String>): AppResult<Unit> {
+        _tombstones.value = _tombstones.value.filterNot { it.entityId in entityIds }
         return AppResult.Success(Unit)
     }
 }

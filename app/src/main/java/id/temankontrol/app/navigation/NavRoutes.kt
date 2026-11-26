@@ -24,6 +24,12 @@ object BackupRoute
 object ReminderSettingsRoute
 
 @Serializable
+object LoginRoute
+
+@Serializable
+object AccountSyncRoute
+
+@Serializable
 data class ConsultationDetailRoute(val id: String)
 
 @Serializable

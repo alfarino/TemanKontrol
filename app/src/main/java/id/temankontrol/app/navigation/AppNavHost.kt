@@ -3,19 +3,23 @@ package id.temankontrol.app.navigation
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
 import id.temankontrol.app.R
 import id.temankontrol.app.feature.about.AboutScreen
+import id.temankontrol.app.feature.account.AccountSyncScreen
+import id.temankontrol.app.feature.account.AuthScreen
 import id.temankontrol.app.feature.backup.BackupScreen
 import id.temankontrol.app.feature.consultation.detail.ConsultationDetailScreen
 import id.temankontrol.app.feature.consultation.form.ConsultationFormScreen
@@ -36,10 +40,12 @@ private data class TopLevelDestination<T : Any>(
     val icon: androidx.compose.ui.graphics.vector.ImageVector
 )
 
+// v3.0 4-Tab Modern Bottom Navigation (FR-078): Beranda, Jadwal, Alarm, Akun
 private val topLevelDestinations = listOf(
     TopLevelDestination(HomeRoute, R.string.nav_home, Icons.Default.Home),
-    TopLevelDestination(HistoryRoute, R.string.nav_history, Icons.Default.DateRange),
-    TopLevelDestination(AboutRoute, R.string.nav_about, Icons.Default.Info)
+    TopLevelDestination(HistoryRoute, R.string.nav_schedule, Icons.Default.DateRange),
+    TopLevelDestination(ReminderSettingsRoute, R.string.nav_alarm, Icons.Default.Alarm),
+    TopLevelDestination(SettingsRoute, R.string.nav_account, Icons.Default.AccountCircle)
 )
 
 @Composable
@@ -76,7 +82,10 @@ fun AppNavHost(
     Scaffold(
         bottomBar = {
             if (isTopLevelDestination) {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 4.dp
+                ) {
                     topLevelDestinations.forEach { dest ->
                         val isSelected = currentDestination?.hierarchy?.any { it.hasRoute(dest.route::class) } == true
                         NavigationBarItem(
@@ -126,7 +135,19 @@ fun AppNavHost(
                         navController.navigate(HistoryRoute)
                     },
                     onNavigateToSettings = {
-                        navController.navigate(SettingsRoute)
+                        navController.navigate(AccountSyncRoute)
+                    },
+                    onNavigateToReminders = {
+                        navController.navigate(ReminderSettingsRoute)
+                    },
+                    onNavigateToBackup = {
+                        navController.navigate(BackupRoute)
+                    },
+                    onNavigateToQuestions = { id ->
+                        navController.navigate(QuestionRoute(consultationId = id))
+                    },
+                    onNavigateToConsultationMode = { id ->
+                        navController.navigate(ConsultationModeRoute(consultationId = id))
                     }
                 )
             }
@@ -135,6 +156,9 @@ fun AppNavHost(
                 HistoryScreen(
                     onNavigateToDetail = { id ->
                         navController.navigate(ConsultationDetailRoute(id = id))
+                    },
+                    onNavigateToCreate = {
+                        navController.navigate(ConsultationFormRoute())
                     }
                 )
             }
@@ -160,7 +184,30 @@ fun AppNavHost(
                 SettingsScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToBackup = { navController.navigate(BackupRoute) },
-                    onNavigateToReminders = { navController.navigate(ReminderSettingsRoute) }
+                    onNavigateToReminders = { navController.navigate(ReminderSettingsRoute) },
+                    onNavigateToAbout = { navController.navigate(AboutRoute) },
+                    onNavigateToAccount = { navController.navigate(AccountSyncRoute) },
+                    onNavigateToLogin = { navController.navigate(LoginRoute) }
+                )
+            }
+
+            composable<LoginRoute> {
+                AuthScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onAuthenticated = {
+                        navController.navigate(AccountSyncRoute) {
+                            popUpTo(LoginRoute) { inclusive = true }
+                        }
+                    },
+                    onContinueGuest = { navController.popBackStack() }
+                )
+            }
+
+            composable<AccountSyncRoute> {
+                AccountSyncScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToLogin = { navController.navigate(LoginRoute) },
+                    onNavigateToBackup = { navController.navigate(BackupRoute) }
                 )
             }
 
@@ -172,7 +219,11 @@ fun AppNavHost(
 
             composable<ReminderSettingsRoute> {
                 ReminderSettingsScreen(
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateBack = {
+                        if (!navController.popBackStack()) {
+                            navController.navigate(HomeRoute)
+                        }
+                    }
                 )
             }
 

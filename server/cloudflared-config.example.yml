@@ -1,0 +1,21 @@
+# Contoh konfigurasi Cloudflare Zero Trust Tunnel (cloudflared)
+# Daftarkan kedua Public Hostname berikut di Cloudflare Zero Trust Dashboard (unand.tech):
+#
+# 1) Subdomain API:
+#    Hostname : api.temankontrol.unand.tech
+#    Service  : http://127.0.0.1:8080   (atau http://temankontrol-api:8080 jika cloudflared 1 network Docker)
+#
+# 2) Subdomain Landing & Privacy Policy (UU PDP / App Store / Play Store):
+#    Hostname : temankontrol.unand.tech
+#    Service  : http://127.0.0.1:8080
+#
+# Jika memakai config.yml lokal di Ubuntu Server:
+tunnel: "<TUNNEL-UUID-ANDA>"
+credentials-file: "/etc/cloudflared/<TUNNEL-UUID-ANDA>.json"
+
+ingress:
+  - hostname: api.temankontrol.unand.tech
+    service: http://127.0.0.1:8080
+  - hostname: temankontrol.unand.tech
+    service: http://127.0.0.1:8080
+  - service: http_status:404

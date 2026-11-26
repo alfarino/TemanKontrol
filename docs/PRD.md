@@ -4,16 +4,16 @@
 |---|---|
 | Produk | Teman Kontrol |
 | Dokumen | `docs/PRD.md` (Single Source of Truth Final) |
-| Versi | **2.0 (Final)** |
-| Status | **Approved (Final)** — Menggabungkan PRD v1.0 + seluruh revisi klien (`PRD-REVISION-FEATURE.md` sudah digabungkan ke dokumen ini) |
-| Tanggal | 17 November 2026 (v1.0: 6 Oktober 2026) |
-| Platform | Android only (minSdk 30 / Android 11) |
-| Stack | Kotlin + Jetpack Compose + Material 3 + Room + DataStore + Hilt |
-| Application ID | `id.temankontrol.app` |
-| Perangkat uji utama | Android Studio Virtual Device (Emulator API 30+) & Redmi Note 10S |
-| Target UI Revisi | Selesai (17 November 2026) |
-| Target Final v2.0 | Persiapan & implementasi engine lokal + Room v2/v3 |
-| Arsip versi lama | `docs/archive/PRD_v0.2.md`, `docs/PRD-REVISION-FEATURE.md` (draf revisi yang telah disatukan) |
+| Versi | **3.0 (Final Master Plan)** |
+| Status | **Approved (v3.0 Master Plan)** — Mencakup v1.0 (MVP) + v2.0 (Revisi Lokal) + **v3.0 (Login & Cloud `unand.tech`, Alarm Berbunyi Nyaring, KMP Android + iPhone/iOS, & Perombakan UI/UX Besar-Besaran)** |
+| Tanggal | 26 November 2026 (v1.0: 6 Okt 2026 · v2.0: 17 Nov 2026) |
+| Platform | **Android (minSdk 30 / Android 11+) & iPhone / iOS (iOS 16+)** via **Opsi 2A: Kotlin Multiplatform (KMP) + Compose Multiplatform (CMP)** |
+| Stack Client | Kotlin Multiplatform + Compose Multiplatform (Material 3 Custom Design System v3) + Room KMP / SQLDelight + DataStore + Koin DI + Ktor Client |
+| Stack Backend | Self-Hosted di **Private Ubuntu Server** (Docker 1 Container Ringan: Backend REST API + **SQLite WAL Mode** + Encrypted Media Storage, `mem_limit: 256m`) via **Cloudflare Tunnel (`https://api.temankontrol.unand.tech`)** |
+| Application ID | `id.temankontrol.app` (Android `applicationId` & iOS `bundleIdentifier`) |
+| Perangkat uji utama | Android Studio AVD / Redmi Note 10S (Android) & Xcode iOS Simulator / iPhone (iOS) |
+| Status Implementasi | **v3.0.0 Selesai (Phase 0–16 PASS)** — Android APK Release v3.0.0 (`app-release.apk`), KMP `:composeApp` + `:iosApp`, & Backend Self-Hosted `:server` (Ktor + SQLite WAL) siap deploy ke `unand.tech` |
+| Arsip versi lama | `docs/archive/PRD_v0.2.md`, `docs/PRD-REVISION-FEATURE.md` (sudah disatukan) |
 
 ---
 
@@ -117,6 +117,13 @@ Setiap perubahan pada dokumen ini:
 | DEC-029 | Skema Room naik bertahap: **v1 (MVP)** → **v2 (jawaban pertanyaan, reminder_log)** → **v3 (attachments)**, wajib `Migration` + `MigrationTestHelper`; destructive migration dilarang | Menjaga integritas data pengguna lama saat update aplikasi (PRD §15.4). | Active |
 | DEC-030 | **Tidak ada batas maksimal jumlah pertanyaan prioritas** (menghapus batas 3 prioritas pada v1.0). *Supersedes FR-008 & C-13 v1.0.* | Sesuai masukan klien agar pengguna bebas menandai sebanyak mungkin pertanyaan penting sebagai prioritas. | Active |
 | DEC-031 | Lampiran Foto & Catatan Suara (VN) ditempatkan **per pertanyaan** (`AttachmentTarget.QUESTION`) dan di **Catatan Tambahan / Hasil Konsultasi** (`AttachmentTarget.ADDITIONAL_NOTE`) | Sesuai masukan klien agar bukti visual/audio melekat langsung pada konteks pertanyaan maupun penjelasan tambahan tenaga medis. | Active |
+| DEC-032 | Platform lintas-OS memakai **Opsi 2A: Kotlin Multiplatform (KMP) + Compose Multiplatform (CMP)** untuk **Android & iPhone (iOS 16+)**. *Supersedes NFR-023 (iOS bukan target) & memperluas DEC-001/DEC-004 (migrasi DI bertahap ke Koin Multiplatform).* | Memaksimalkan penggunaan ulang kode domain, validasi, planner, dan UI Compose yang sudah selesai di v2.0 agar berjalan di Android dan iPhone dari satu basis kode utama. | Active (v3.0) |
+| DEC-033 | **Fitur Login & Pemulihan/Sinkronisasi Berbasis Akun** diaktifkan dengan mode **Offline-First + Cloud-Linked Account**. *Supersedes DEC-011 (larangan INTERNET) & DEC-023 (tanpa login).* | Memungkinkan pengguna memulihkan seluruh data dan lampiran foto/VN secara otomatis cukup dengan login akunnya saat ganti/rusak HP atau berpindah antara Android dan iPhone, sambil tetap bisa dipakai 100% offline saat tanpa sinyal. | Active (v3.0) |
+| DEC-034 | Backend di-hosting mandiri pada **Private Ubuntu Server** milik tim dalam **1 container Docker super ringan (`temankontrol-api`: Ktor REST API + SQLite WAL Mode + Local Encrypted Media Volume, `mem_limit: 256m`)** tanpa perlu container database terpisah, dan dipublikasikan secara aman melalui **Cloudflare Tunnel (`cloudflared`)** pada subdomain **`https://api.temankontrol.unand.tech`** & **`https://temankontrol.unand.tech`** | Memanfaatkan infrastruktur Ubuntu Server & domain `unand.tech` yang sudah ada tanpa membebani RAM/CPU container lain di server (~30–80 MB RAM idle), skema SQL 100% selaras dengan Room SQLite di HP, backup cukup 1 file `.db`, dengan TLS/HTTPS penuh dan proteksi WAF/DDoS Cloudflare tanpa membuka port publik. | Active (v3.0) |
+| DEC-035 | Engine Pengingat dirombak menjadi **Alarm-Grade Reminder Engine** (`AlarmManager.setAlarmClock` + `USAGE_ALARM` + `RingtoneManager.TYPE_ALARM` + Full-Screen Alarm Alert & Snooze di Android; `UNUserNotificationCenter` Time-Sensitive + custom alarm audio `.caf` 30 detik di iOS). *Supersedes DEC-025 (inexact alarm tanpa suara alarm).* | Menyelesaikan bug notifikasi tidak muncul akibat penundaan Doze mode pada `setAndAllowWhileIdle`, race condition izin `POST_NOTIFICATIONS`, serta memenuhi permintaan klien agar pengingat berbunyi nyaring layaknya alarm/weker. | Active (v3.0) |
+| DEC-036 | **Perombakan Besar-Besaran UI/UX v3.0 ("Warm Healthcare Companion")**: desain ulang menyeluruh seluruh layar dengan *Hero Countdown & Readiness Card* di Beranda, *3-Step Guided Stepper* (Sebelum → Saat → Sesudah Kontrol) di Detail Kunjungan, *Bento Quick Actions*, *Inline Audio Waveform*, dan *4-Tab Bottom Navigation* (Beranda, Jadwal & Riwayat, Alarm, Profil & Akun). | Menjawab permintaan klien agar tampilan jauh lebih menarik, modern, tidak tampak seperti form kaku, dan sangat mudah digunakan oleh pasien segala usia. | Active (v3.0) |
+| DEC-037 | Kepatuhan **UU PDP No. 27/2022** & **Apple App Store Guideline 5.1.1(v)**: wajib menyediakan halaman Kebijakan Privasi (`https://temankontrol.unand.tech/privacy`), persetujuan eksplisit saat registrasi akun, enkripsi TLS 1.3 + enkripsi penyimpanan server, serta fitur **"Hapus Akun & Seluruh Data Permanen"** di dalam aplikasi. | Syarat hukum penyimpanan data kesehatan di server dan syarat mutlak kelulusan review Apple App Store & Google Play Store. | Active (v3.0) |
+| DEC-038 | Fitur ekspor/impor berkas `.tkbackup` (DEC-022) **tetap dipertahankan** berdampingan dengan pemulihan akun cloud | Memberi jaminan ganda: pengguna yang belum login atau berada di area tanpa internet tetap bisa mencadangkan data secara lokal. | Active (v3.0) |
 
 ---
 
@@ -1515,3 +1522,262 @@ Semua pertanyaan blocking telah dijawab. Sisa pertanyaan non-blocking:
 | 0.2 | 6 Okt 2026 | Draft: Android-only, offline, Redmi Note 10S (arsip: `docs/archive/PRD_v0.2.md`) |
 | 1.0 | 6 Okt 2026 | **Approved.** OQ-01–04 dijawab (DEC-001, 002, 005, 007). Ditambahkan: Decision Log, Glosarium, kontrak repository Kotlin, skema Room + index, validation rules (VR), microcopy SSOT, design tokens, katalog saran, standar performa terukur (NFR-024–030) & aturan implementasi, privasi teknis (backup off, tanpa INTERNET), aksesibilitas (NFR-031–033), kompatibilitas (edge-to-edge, predictive back, dark mode), F-08 Beranda & F-09 Tentang, FR-023–025, AC-17–22, TC-021–024, technical spike TS-01, engineering conventions, references. Lokasi dipindah ke `docs/PRD.md`. |
 | **2.0 (Final)** | **17 Nov 2026** | **Final SSOT Terpadu.** Menggabungkan PRD v1.0 dan seluruh revisi fitur klien (`PRD-REVISION-FEATURE.md`): F-10 Cadangan & Pemulihan `.tkbackup` (AES-256 opsional, tanpa login/internet), F-11 Pertanyaan Terbuka (katalog 20 template / 5 kategori termasuk Pemahaman, chip awalan, petunjuk non-blocking VR-18, jawaban dicatat VR-13), F-12 Pengingat Lokal privat (DEC-025/026), F-13 Lampiran Foto & VN **per pertanyaan** dan di **Catatan Tambahan / Hasil Konsultasi** (DEC-031), F-14 Kunci Aplikasi (DEC-028), F-15 Mode Konsultasi, F-16 Bawa Pertanyaan, F-17 Ringkasan & Bagikan (Teks/PDF); penghapusan batas 3 pertanyaan prioritas (DEC-030); pembaruan skema Room v1→v2→v3, SCR-10..SCR-17, FR-026..060, NFR-040..052, VR-13..19, AC-23..41, dan TC-025..033. |
+| **3.0 (Master Plan)** | **26 Nov 2026** | **Ekspansi Multiplatform, Cloud Self-Hosted, Alarm Engine, & UI Overhaul v3.0.** Menambahkan keputusan `DEC-032` s/d `DEC-038` dan spesifikasi lengkap **§32**: (1) **F-18 Login, Akun & Pemulihan/Sinkronisasi Cloud** pada **Private Ubuntu Server + Cloudflare (`api.temankontrol.unand.tech`)**, (2) **Perbaikan Bug Notifikasi & Engine Pengingat Setara Alarm Berbunyi (`F-12 v3` / `SCR-20`)** dengan `setAlarmClock`, stream `USAGE_ALARM`, Full-Screen Alert, Snooze, & tombol Tes Alarm, (3) **Opsi 2A Kotlin Multiplatform (KMP) + Compose Multiplatform (CMP)** untuk **Android & iPhone (iOS 16+)**, (4) **Perombakan Besar-Besaran UI/UX v3.0 ("Warm Healthcare Companion")**, serta `FR-061`..`FR-082`, `NFR-053`..`NFR-062`, `AC-42`..`AC-55`, `TC-034`..`TC-045`, dan Roadmap Eksekusi **Phase 11 s/d Phase 16**. |
+
+---
+
+## 32. Master Plan Ekspansi v3.0 (Login & Cloud `unand.tech`, Perbaikan Bug Alarm, iPhone/iOS KMP, & Perombakan UI/UX)
+
+Bagian ini menjadi **acuan utama pengembangan tahap v3.0** yang memperluas fondasi v2.0 tanpa merusak fitur yang sudah lulus di Phase 0–10.
+
+---
+
+### 32.1 Diagnosis Bug Notifikasi v2.0 & Spesifikasi Engine Alarm Berbunyi (`F-12 v3`)
+
+#### A. Akar Masalah Mengapa Notifikasi v2.0 Kadang Tidak Muncul / Tidak Berbunyi Seperti Alarm
+
+Berdasarkan audit kode `ReminderPlanner.kt`, `ReminderScheduler.kt`, `ReminderNotificationHelper.kt`, dan `ConsultationFormScreen.kt`:
+
+1. **Penundaan *Inexact Alarm* (`AlarmManager.setAndAllowWhileIdle`):**
+   Pada Android 12–17 (khususnya Xiaomi/MIUI, Samsung, OPPO/ColorOS), *inexact alarm* ditahan oleh penghemat baterai/Doze mode hingga 15–60 menit atau dibatalkan jika aplikasi tidak sedang dibuka.
+2. **Jadwal Hanya H-1 & H-2 Jam (Tidak Ada Alarm Tepat Saat Jam Kunjungan):**
+   `ReminderPlanner` v2.0 hanya menjadwalkan pengingat pada **H-1 pukul 19.00** dan **2 jam sebelum** `appointmentAt`. Akibatnya, saat pengguna/klien membuat jadwal kunjungan beberapa menit ke depan untuk menguji notifikasi, waktu H-1 dan H-2 jam sudah terlewat sehingga tidak ada alarm pada jam kunjungan tersebut.
+3. **Urutan Izin `POST_NOTIFICATIONS` (*Race Condition*):**
+   Pada `ConsultationFormScreen`, `viewModel.submit()` menyimpan kunjungan dan memanggil `reminderScheduler.rescheduleAll()` **sebelum** callback `onSuccess` meminta izin `POST_NOTIFICATIONS`. Selain itu, pada `ReminderScheduler.handleAlarmFired()`, pencatatan ke `reminder_log` perlu memastikan notifikasi benar-benar berhasil diposting (`granted == true`).
+4. **Suara Notifikasi Pendek Biasa (`TYPE_NOTIFICATION`):**
+   Channel notifikasi v2.0 hanya memakai bunyi notifikasi standar 1 detik, bukan stream audio **Alarm (`USAGE_ALARM` / `RingtoneManager.TYPE_ALARM`)** yang berdering panjang dan membangunkan pengguna.
+
+#### B. Arsitektur Baru Engine Alarm v3.0 ("Mirip Seperti Alarm, Ada Bunyinya")
+
+```mermaid
+flowchart TD
+    A["Simpan Kunjungan / Tindak Lanjut / Ubah Setelan"] --> B["Pastikan Izin POST_NOTIFICATIONS & Exact Alarm"]
+    B --> C["ReminderPlanner v3: Hitung H-1, -2 Jam, -30 Menit, Jam-H (Exact), & Custom Offset"]
+    C --> D{"Platform?"}
+    D -->|"Android"| E["AlarmManager.setAlarmClock() + PendingIntent"]
+    D -->|"iPhone (iOS)"| F["UNUserNotificationCenter (Time-Sensitive + 30s Alarm Sound .caf)"]
+    E --> G["Waktu Tiba -> AlarmForegroundService + Full-Screen Alarm Activity (SCR-20)"]
+    G --> H["Dering USAGE_ALARM (Looping) + Getar Berulang"]
+    H --> I{"Aksi Pengguna"}
+    I -->|"Matikan / Saya Siap"| J["Hentikan Dering + Catat di reminder_log + Jadwalkan Berikutnya"]
+    I -->|"Tunda 10 Menit (Snooze)"| K["Hentikan Dering + Pasang AlarmClock +10 Menit"]
+```
+
+| Komponen | Spesifikasi Teknis v3.0 |
+|---|---|
+| **API Penjadwalan Android** | **`AlarmManager.setAlarmClock(AlarmClockInfo, pendingIntent)`** (prioritas tertinggi di OS Android, tidak pernah ditahan Doze mode, menampilkan indikator jam alarm di status bar) dengan fallback `setExactAndAllowWhileIdle()`. |
+| **Izin Manifest Baru (Android)** | `USE_EXACT_ALARM`, `SCHEDULE_EXACT_ALARM`, `USE_FULL_SCREEN_INTENT`, `WAKE_LOCK`, `VIBRATE`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK` (atau `SYSTEM_ALERT_WINDOW` opsional). |
+| **Suara & Getar Alarm** | Stream `AudioAttributes.USAGE_ALARM` + `ContentType.SONIFICATION` memakai `RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)` (atau nada alarm pilihan pengguna), berdering *looping* selama maks. 60 detik disertai getaran berirama (`0, 800, 400, 800, 400, 1000 ms`). |
+| **Pilihan Mode Pengingat** | Pengguna dapat memilih gaya pengingat: **(1) Mode Alarm Berbunyi Nyaring (Default untuk Kunjungan)** atau **(2) Mode Notifikasi Standar**. |
+| **Waktu Trigger Lengkap** | Untuk setiap kunjungan `SCHEDULED`: **H-1 (jam pilihan)**, **2 jam sebelum**, **30 menit sebelum**, **Tepat pada jam kunjungan (`0 menit`)**, ditambah opsi **Pengingat Kustom per Kunjungan** (*5 menit / 15 menit / 1 jam / 1 hari sebelum*). |
+| **Layar Alarm Berbunyi (`SCR-20`)** | Muncul otomatis saat alarm berbunyi (termasuk di atas layar kunci via `setShowWhenLocked(true)` & `setTurnScreenOn(true)`): menampilkan waktu kunjungan, pesan privasi/judul kunjungan, tombol besar **"Matikan Alarm / Saya Siap"** dan **"Tunda 10 Menit (Snooze)"**. |
+| **Tombol Uji Langsung** | Pada layar Alarm (`SCR-12`), wajib tersedia tombol **"Tes Bunyi Alarm Sekarang (5 Detik)"** agar pengguna/klien dapat memastikan suara dan layar alarm berfungsi seketika di perangkatnya. |
+| **Implementasi iPhone (iOS)** | `UNUserNotificationCenter` dengan `interruptionLevel = .timeSensitive`, file audio alarm kustom 30 detik (`alarm_teman_kontrol.caf` di bundle iOS), serta kategori aksi `SNOOZE_10_MIN` dan `MARK_READY`. |
+
+---
+
+### 32.2 Spesifikasi Fitur Login, Akun & Pemulihan Data Terkait Akun (`F-18`)
+
+- **Prinsip Utama:** **Offline-First + Cloud-Linked Account.**
+  - Seluruh fitur aplikasi tetap berjalan cepat secara lokal di database HP (tanpa loading jaringan saat membuka atau mencatat kunjungan).
+  - Saat pengguna **Masuk (Login)** ke akunnya, seluruh data lokal otomatis ditautkan dan disinkronkan ke server `api.temankontrol.unand.tech`.
+  - Ketika pengguna berganti HP (mis. HP lama rusak, ganti ke HP Android baru, atau pindah ke **iPhone**), pengguna cukup **Login dengan akun yang sama** → seluruh riwayat kunjungan, pertanyaan terbuka, jawaban, catatan hasil, tindak lanjut, setelan alarm, serta **foto & rekaman suara (VN)** langsung pulih otomatis!
+
+| Sub-Fitur | Rincian Perilaku & Alur |
+|---|---|
+| **Registrasi & Login (`SCR-18`)** | 1. **Email + Kata Sandi** (min. 8 karakter, hash Argon2id di server) + verifikasi/reset kata sandi via kode OTP Email.<br>2. **Mode Tanpa Akun (Tamu / Lokal):** Tombol *"Lewati, gunakan secara lokal dulu"* tetap tersedia; kapan pun pengguna login di kemudian hari, data lokal yang sudah dibuat otomatis digabungkan (*merge*) ke akun tersebut! |
+| **Manajemen Sesi & Keamanan** | Menggunakan **JWT Access Token** (berlaku 15 menit) + **Refresh Token** (berlaku 30 hari, disimpan terenkripsi di Android EncryptedSharedPreferences/DataStore & iOS Keychain). |
+| **Pemulihan & Sinkronisasi Otomatis (`SCR-19`)** | - **Saat Login di HP Baru:** Menampilkan kartu *"Memulihkan data akun Anda…"* dengan progres unduh metadata & lampiran media.<br>- **Sinkronisasi Latar Belakang & Manual:** Setiap ada perubahan data lokal (buat/ubah/hapus kunjungan, pertanyaan, jawaban, catatan, tindak lanjut, foto, VN), *SyncEngine* mengirim perubahan (`delta push`) saat koneksi tersedia, ditambah tombol **"Sinkronkan Sekarang"** & status *"Tersinkron: Baru saja"*.<br>- **Resolusi Konflik:** *Last-Write-Wins (LWW)* berbasis `updated_at` (epoch millis UTC) per record, serta *soft-delete tombstone* (`deleted_at`) agar item yang dihapus di satu perangkat ikut terhapus di perangkat lain. |
+| **Cadangan `.tkbackup` Cloud & Lokal** | Selain sinkronisasi tabel otomatis, pengguna dapat menekan **"Simpan Snapshot `.tkbackup` ke Akun Cloud"** atau tetap mengekspor berkas `.tkbackup` ke penyimpanan lokal/flashdisk. |
+| **Hapus Akun & Data (`DEC-037`)** | Di layar Profil & Akun (`SCR-19`), tersedia menu **"Hapus Akun & Data Permanen"** dengan konfirmasi kata sandi: menghapus akun, seluruh record SQLite pengguna, dan seluruh file Foto/VN di server Ubuntu secara permanen (memenuhi UU PDP & syarat wajib Apple App Store). |
+
+---
+
+### 32.3 Arsitektur Backend Self-Hosted di Private Ubuntu Server + Cloudflare (`unand.tech`)
+
+Memanfaatkan infrastruktur yang sudah dimiliki (**Private Ubuntu Server + Akun Cloudflare + Domain `unand.tech`**) dengan desain **1 Container Ultra-Ringan (SQLite WAL Mode)** agar tidak membebani aplikasi Docker lain yang sudah berjalan di Ubuntu Server:
+
+```mermaid
+flowchart LR
+    A["Aplikasi Android (KMP)"] -->|"HTTPS TLS 1.3"| CF["Cloudflare Edge (unand.tech)"]
+    B["Aplikasi iPhone / iOS (KMP)"] -->|"HTTPS TLS 1.3"| CF
+    CF -->|"Cloudflare Tunnel (cloudflared)"| U["Private Ubuntu Server (Docker)"]
+    subgraph U["Private Ubuntu Server (Hanya 1 App Container Ringan, Tanpa Open Port Publik)"]
+        API["temankontrol-api (Ktor REST API + Landing/Privacy :8080 | mem_limit: 256m)"]
+        DB[("SQLite WAL (/data/db/temankontrol.db)")]
+        FS[("Encrypted Media Storage (/data/attachments)")]
+        API --> DB
+        API --> FS
+    end
+```
+
+#### A. Konfigurasi Domain & Cloudflare (`unand.tech`)
+
+| Subdomain | Fungsi | Konfigurasi Cloudflare |
+|---|---|---|
+| **`api.temankontrol.unand.tech`** | Endpoint REST API Autentikasi, Sinkronisasi Data, & Upload/Download Foto/VN | CNAME via **Cloudflare Tunnel (`cloudflared`)** → `http://temankontrol-api:8080`, SSL/TLS **Full (Strict)**, WAF & Rate Limiting aktif pada `/v1/auth/*` |
+| **`temankontrol.unand.tech`** | Halaman informasi aplikasi, **Kebijakan Privasi (`/privacy`)**, & halaman bantuan hapus akun (dilayani langsung sebagai static route oleh `temankontrol-api` tanpa perlu container web terpisah) | CNAME via Cloudflare Tunnel → `http://temankontrol-api:8080` |
+
+#### B. Spesifikasi Layanan di Private Ubuntu Server (`docker-compose.yml`)
+
+1. **`cloudflared` (Cloudflare Zero Trust Tunnel):**
+   - Dapat memakai `cloudflared` yang sudah ada di Ubuntu Server (cukup tambah 2 *Public Hostname* di dashboard Cloudflare Zero Trust) atau container daemon ringan; mengenkripsi trafik keluar dari Ubuntu Server ke jaringan Cloudflare sehingga **tidak perlu port-forwarding router atau membuka port 80/443 di IP publik Ubuntu Server**.
+2. **`temankontrol-api` (Single Container: Kotlin Ktor Server + Embedded SQLite WAL + Static Privacy Page):**
+   - **Hemat Resource Server:** Tidak membutuhkan container database terpisah (tanpa daemon PostgreSQL/MySQL). Dibatasi dengan `mem_limit: 256m` dan `cpus: "0.50"` di `docker-compose.yml` (pemakaian RAM nyata saat idle hanya ~40–80 MB) sehingga sangat aman berdampingan dengan container Docker lain di Ubuntu Server.
+   - Memakai modul `:shared-dto` yang sama dengan aplikasi mobile sehingga kontrak JSON 100% *type-safe*.
+   - **Daftar Endpoint REST API v1:**
+     - `POST /v1/auth/register` — Daftar akun baru (`email`, `password`, `displayName`).
+     - `POST /v1/auth/login` — Login & dapatkan `accessToken` + `refreshToken`.
+     - `POST /v1/auth/refresh` — Perbarui token sesi.
+     - `POST /v1/auth/logout` — Cabut `refreshToken`.
+     - `POST /v1/auth/forgot-password` & `POST /v1/auth/reset-password` — Pemulihan kata sandi via OTP Email (SMTP).
+     - `DELETE /v1/account` — Hapus akun beserta seluruh data SQLite & file media pengguna secara permanen.
+     - `POST /v1/sync/push` — Unggah batch perubahan lokal (`consultations`, `questions`, `notes`, `followUps`, `attachmentsMeta`, `reminderSettings`).
+     - `GET /v1/sync/pull?since={epochMillis}` — Unduh seluruh perubahan & *tombstone* sejak timestamp terakhir (atau `since=0` saat pemulihan penuh di HP baru).
+     - `PUT /v1/attachments/{attachmentId}/file` — Unggah file biner Foto (`.jpg`) atau VN (`.m4a`) (Streaming, maks. 15 MB/file).
+     - `GET /v1/attachments/{attachmentId}/file` — Unduh file biner Foto/VN saat pemulihan di perangkat baru.
+     - `GET /privacy` & `GET /health` — Halaman Kebijakan Privasi (UU PDP & App Store/Play Store) serta endpoint healthcheck container.
+3. **Database Embedded SQLite (WAL Mode — `/data/db/temankontrol.db`):**
+   - Dikonfigurasi saat startup dengan:
+     - `PRAGMA journal_mode = WAL;` (pembacaan konkuren berkecepatan tinggi tanpa memblokir penulisan)
+     - `PRAGMA synchronous = NORMAL;`
+     - `PRAGMA foreign_keys = ON;`
+     - `PRAGMA busy_timeout = 5000;`
+   - **100% Selaras dengan Skema Room di HP:** Tabel `users`, `refresh_tokens`, `consultations`, `questions`, `consultation_notes`, `follow_up_actions`, `attachments`, `user_settings`.
+   - Seluruh tabel bisnis memiliki kolom `user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE`, `updated_at INTEGER NOT NULL`, dan `deleted_at INTEGER NULL` (untuk sinkronisasi penghapusan lintas perangkat).
+4. **Backup Server Otomatis (Zero-Downtime Single-File Snapshot):**
+   - Karena menggunakan SQLite WAL, backup seluruh server sangat ringan: script backup harian cukup menjalankan `sqlite3 /data/db/temankontrol.db ".backup '/data/backups/temankontrol-$(date +%F).db'"` beserta arsip `/data/attachments`.
+
+---
+
+### 32.4 Arsitektur Opsi 2A — Kotlin Multiplatform (KMP) + Compose Multiplatform (CMP) untuk Android & iPhone
+
+Seluruh kode dimigrasikan dari *single-module Android* (`:app`) menjadi struktur **Kotlin Multiplatform** yang bersih:
+
+```text
+TemanKontrol/
+├── shared-dto/                      # DTO Kotlinx Serialization yang dipakai bersama oleh Mobile & Backend Server
+├── composeApp/                      # Modul Utama KMP + Compose Multiplatform (Android & iOS)
+│   └── src/
+│       ├── commonMain/              # 100% Shared Kotlin Code ( dipakai Android & iPhone )
+│       │   ├── domain/              # Models, Validation (VR-01..VR-25), ReminderPlanner v3, Repositories
+│       │   ├── data/
+│       │   │   ├── local/           # Room KMP (androidx.room 2.7+ KMP + BundledSQLiteDriver) & DataStore KMP
+│       │   │   ├── remote/          # Ktor HTTP Client (AuthApi, SyncApi, MediaApi -> api.temankontrol.unand.tech)
+│       │   │   ├── sync/            # OfflineFirstSyncEngine (Merge local <-> cloud, attachment queue)
+│       │   │   └── backup/          # Multiplatform .tkbackup archive & crypto
+│       │   ├── di/                  # Koin Multiplatform Modules
+│       │   ├── ui/                  # Design System v3.0 ("Warm Healthcare Companion")
+│       │   ├── feature/             # Seluruh 20 Layar Compose Multiplatform (SCR-01 s/d SCR-20)
+│       │   └── navigation/          # JetBrains Navigation Compose Multiplatform (Type-safe routes)
+│       ├── androidMain/             # Adapter Spesifik Android
+│       │   ├── alarm/               # AndroidAlarmScheduler (setAlarmClock + AlarmForegroundService + FullScreen)
+│       │   ├── media/               # AndroidCamera, ImageDecoder, MediaRecorder/MediaPlayer
+│       │   ├── security/            # AndroidBiometricAuth (BiometricPrompt)
+│       │   └── pdf/                 # AndroidPdfGenerator (PdfDocument)
+│       └── iosMain/                 # Adapter Spesifik iPhone (iOS)
+│           ├── MainViewController.kt# ComposeUIViewController entry point untuk iOS
+│           ├── alarm/               # IosAlarmScheduler (UNUserNotificationCenter Time-Sensitive + .caf sound)
+│           ├── media/               # IosPhotoPicker (PHPicker), AVAudioRecorder/AVAudioPlayer
+│           ├── security/            # IosBiometricAuth (LAContext FaceID / TouchID / Passcode)
+│           └── pdf/                 # IosPdfGenerator (UIGraphicsPDFRenderer)
+├── iosApp/                          # Proyek Xcode (SwiftUI wrapper -> memanggil MainViewController)
+└── server/                          # Proyek Backend Ktor + Docker Compose untuk Private Ubuntu Server (unand.tech)
+```
+
+> [!TIP]
+> **Keunggulan Room 2.7+ KMP + DataStore KMP:** Sejak Room 2.7 mendukung Kotlin Multiplatform secara resmi dengan `BundledSQLiteDriver`, seluruh Entity (`ConsultationEntity`, `QuestionEntity`, `AttachmentEntity`, dll.) dan DAO yang sudah kita bangun di v2.0 dapat langsung dipindahkan ke `commonMain` dan berjalan identik di **Android maupun iPhone**!
+
+---
+
+### 32.5 Perombakan Besar-Besaran UI/UX v3.0 ("Warm Healthcare Companion")
+
+Untuk menjawab masukan klien #4 (*"Perombakan tampilan besar-besaran agar jadi lebih menarik dan mudah untuk digunakan"*), antarmuka aplikasi dirombak total dari gaya daftar-formulir menjadi pengalaman visual yang hangat, modern, dan memandu pengguna secara intuitif.
+
+#### A. Pembaruan Design System & Visual Tokens v3.0
+
+| Elemen | Desain Lama (v1.0–v2.0) | Desain Baru v3.0 ("Warm Healthcare Companion") |
+|---|---|---|
+| **Palet Warna** | Teal datar `#0F7C80` di atas abu-abu `surfaceVariant` | **Hero Gradient Teal-Emerald** (`#0B6E72` → `#14919B`), aksen hangat **Warm Coral/Amber** (`#F97316`) untuk tombol aksi penting & alarm aktif, latar **Soft Porcelain Mint** (`#F3F8F8` Light / `#0D1518` Dark) dengan kartu putih bersih berbayang lembut (*elevated card*). |
+| **Navigasi Utama** | 3 tab bawah (`Beranda`, `Riwayat`, `Tentang`) | **4 Tab Bawah Modern + Pill Indicator:**<br>1. **Beranda** (Dashboard)<br>2. **Jadwal** (Kalender & Riwayat)<br>3. **Alarm** (Pusat Pengingat Berbunyi)<br>4. **Akun** (Profil, Sync Cloud `unand.tech`, & Cadangan) |
+| **Kartu & Hierarki** | Kartu teks seragam, padat | Kartu berlapis (*layered cards*) dengan **ikon berkontainer warna lembut**, *progress ring/bar*, *badge* status kontras tinggi, dan tombol utama berukuran nyaman (**tinggi 54 dp**, sudut membulat **16–20 dp**). |
+| **Animasi & Feedback** | Transisi instan tanpa indikator visual | Animasi transisi antar-tahap yang halus, **visual gelombang suara (*live audio waveform*)** saat merekam/memutar VN, dan indikator sinkronisasi awan yang hidup. |
+
+#### B. Perombakan Layar Utama (Before vs After)
+
+1. **Beranda Baru (`SCR-02` — Personal Health Companion Dashboard):**
+   - **Top Greeting & Cloud Sync Pill:** Menampilkan sapaan (*"Selamat Pagi, Budi 👋"*) + lencana status akun (*"☁️ Tersinkron • unand.tech"* atau *"Mode Lokal — Ketuk untuk Login"*).
+   - **Hero Card "Kunjungan Terdekat" (Visual Countdown & Readiness):**
+     - Menampilkan hitung mundur waktu nyata (*"Besok • 09.00 WIB — 19 Jam Lagi"*), nama dokter & RS, serta **Bar Kesiapan Kontrol** (mis. *"Kesiapan 85%: 4 Pertanyaan Siap • Alarm Aktif"*).
+     - Tombol Aksi Langsung di Hero Card: **[▶ Mulai Mode Konsultasi]** dan **[+ Pertanyaan]**.
+   - **Bento Quick Actions (Grid 2×2 Berikon Warna):**
+     - `Buat Jadwal Kontrol` · `Katalog Pertanyaan Terbuka` · `Tes & Atur Alarm` · `Sinkronisasi & Cadangan`.
+   - **Kartu Tindak Lanjut Prioritas:** Checklist interaktif dengan indikator progres penyelesaian (*"2 dari 3 selesai"*).
+
+2. **Detail Kunjungan Baru (`SCR-04` — Guided 3-Step Journey Workspace):**
+   - Tidak lagi menumpuk semua bagian dalam satu halaman panjang yang membingungkan. Diganti menjadi **Stepper 3 Tahap Interaktif** di bawah header kunjungan:
+     - **Tahap 1: Persiapan (Sebelum Kontrol)** → Daftar pertanyaan terbuka dengan kartu *expandable*, chip awalan (`Apa…`, `Mengapa…`, `Bagaimana…`), dan tombol cepat **+ Foto / + VN** per pertanyaan, ditambah status **Alarm Kunjungan** yang bisa diaktifkan/diubah langsung dari tahap ini.
+     - **Tahap 2: Ruang Periksa (Saat Kontrol)** → Kartu fokus **Mode Konsultasi**, pencatatan **"Jawaban yang Anda catat"** secara *inline* di bawah tiap pertanyaan tanpa membuka dialog terpisah, serta **Floating Quick Voice Recorder** (rekam penjelasan dokter 1-ketuk).
+     - **Tahap 3: Hasil & Tindak Lanjut (Sesudah Kontrol)** → Ringkasan pembahasan, arahan tenaga kesehatan, **Galeri Foto & Player VN Catatan Tambahan**, daftar checklist tindak lanjut, serta tombol **Bagikan Ringkasan PDF**.
+
+3. **Pusat Alarm & Pengingat Baru (`SCR-12` & `SCR-20`):**
+   - Menampilkan daftar alarm kunjungan yang akan berbunyi layaknya aplikasi Jam/Alarm HP (dengan switch ON/OFF besar per jadwal), pilihan nada dering alarm, toggle **"Bunyikan Seperti Alarm (Tetap Berbunyi Saat Silent)"**, dan tombol **"🔊 Tes Bunyi Alarm Sekarang"**.
+
+4. **Layar Profil, Login & Sinkronisasi Cloud (`SCR-18` & `SCR-19`):**
+   - Desain bersih untuk Masuk / Daftar Akun, kartu status sinkronisasi ke `api.temankontrol.unand.tech`, tombol **"Pulihkan / Sinkronkan Sekarang"**, ekspor `.tkbackup`, Kunci Aplikasi Biometrik (Sidik Jari / FaceID), dan pengaturan Hapus Akun.
+
+---
+
+### 32.6 Requirements, Acceptance Criteria & Test Cases Baru (v3.0)
+
+#### A. Functional Requirements Baru (`FR-061` s/d `FR-080`)
+
+| ID | Requirement | Pri | Fitur |
+|---|---|:---:|---|
+| FR-061 | Registrasi akun baru, login, logout, dan refresh token JWT ke `https://api.temankontrol.unand.tech`. | P0 | F-18 |
+| FR-062 | Aplikasi tetap dapat digunakan tanpa login (*Guest/Local Mode*); saat pengguna login, data lokal digabungkan (*merge*) ke akun pengguna tanpa hilang. | P0 | F-18 |
+| FR-063 | Sinkronisasi dua arah otomatis (*delta push & pull*) untuk kunjungan, pertanyaan, jawaban, catatan, tindak lanjut, dan setelan pengingat. | P0 | F-18 |
+| FR-064 | Unggah & unduh otomatis file lampiran Foto (`.jpg`) dan Catatan Suara (`.m4a`) yang terhubung ke akun pengguna. | P1 | F-18, F-13 |
+| FR-065 | Pemulihan penuh otomatis (*Full Account Restore*) saat login di perangkat baru (Android maupun iPhone). | P0 | F-18 |
+| FR-066 | Fitur "Hapus Akun & Seluruh Data Permanen" dari dalam aplikasi (`DELETE /v1/account`). | P0 | F-18 |
+| FR-067 | Penjadwalan pengingat kunjungan di Android wajib memakai **`AlarmManager.setAlarmClock`** (atau `setExactAndAllowWhileIdle`) agar tidak ditunda Doze mode. | P0 | F-12 v3 |
+| FR-068 | Pengingat kunjungan mendukung **Mode Alarm Berbunyi Nyaring** menggunakan stream `USAGE_ALARM` (`RingtoneManager.TYPE_ALARM`) + getaran berulang. | P0 | F-12 v3 |
+| FR-069 | Menampilkan layar **Full-Screen Alarm Alert (`SCR-20`)** saat waktu pengingat tiba dengan aksi **Matikan Alarm / Saya Siap** dan **Tunda 10 Menit (Snooze)**. | P0 | F-12 v3 |
+| FR-070 | Menambahkan waktu trigger pengingat: **H-1**, **2 Jam Sebelum**, **30 Menit Sebelum**, **Tepat Jam Kunjungan**, dan **Offset Kustom per Kunjungan**. | P1 | F-12 v3 |
+| FR-071 | Menyediakan tombol **"Tes Bunyi Alarm Sekarang"** di `SCR-12` untuk memverifikasi dering & tampilan alarm secara instan. | P1 | F-12 v3 |
+| FR-072 | Memperbaiki urutan permintaan izin `POST_NOTIFICATIONS` & `SCHEDULE_EXACT_ALARM` sebelum jadwal disimpan, serta mencatat `reminder_log` hanya jika alarm/notifikasi benar-benar tampil. | P0 | F-12 v3 |
+| FR-073 | Kompilasi & eksekusi lintas platform (**Android & iPhone/iOS**) dari modul bersama `:composeApp` (Opsi 2A KMP + CMP). | P0 | Multiplatform |
+| FR-074 | Implementasi adapter native iOS (`iosMain`) untuk Notifikasi Time-Sensitive + audio `.caf`, Photo Picker, `AVAudioRecorder`/`AVAudioPlayer`, FaceID/TouchID, dan PDF generator. | P1 | Multiplatform |
+| FR-075 | Implementasi Design System v3.0 ("Warm Healthcare Companion") dengan dukungan tema Terang & Gelap yang konsisten di Android & iPhone. | P0 | UI v3.0 |
+| FR-076 | Beranda baru (`SCR-02`) dengan Hero Countdown Card, Bar Kesiapan Kontrol, Cloud Sync Pill, dan Bento Quick Actions. | P0 | UI v3.0 |
+| FR-077 | Detail Kunjungan baru (`SCR-04`) dengan navigasi **Stepper 3 Tahap** (Sebelum → Saat → Sesudah Kontrol) & input jawaban/VN *inline*. | P0 | UI v3.0 |
+| FR-078 | Navigasi bawah 4 tab (`Beranda`, `Jadwal`, `Alarm`, `Akun`) dengan strip kalender dan pencarian cepat di tab Jadwal. | P1 | UI v3.0 |
+
+#### B. Acceptance Criteria Baru (`AC-42` s/d `AC-55`)
+
+| AC | Given | When | Then |
+|---|---|---|---|
+| AC-42 | Pengguna belum login dan sudah punya 2 kunjungan lokal | Pengguna mendaftar/login ke akun `unand.tech` | Ke-2 kunjungan lokal tergabung ke akun dan tersinkron ke server tanpa ada data yang hilang |
+| AC-43 | Akun memiliki kunjungan, jawaban, foto, dan VN di server | Pengguna login di HP baru (Android atau iPhone) | Seluruh data dan file foto/VN otomatis terunduh dan tampil utuh |
+| AC-44 | Pengguna sedang offline (airplane mode) | Buat/edit kunjungan & lampiran lalu kembali online | Operasi lokal berhasil seketika; saat online, *SyncEngine* otomatis mengunggah perubahan ke `api.temankontrol.unand.tech` |
+| AC-45 | Pengguna menekan "Hapus Akun" & konfirmasi | Permintaan dikirim ke server | Akun, seluruh baris database, dan seluruh file media pengguna di Ubuntu server terhapus permanen; sesi lokal dibersihkan |
+| AC-46 | Kunjungan dijadwalkan 2 menit ke depan dengan Mode Alarm aktif | Waktu mencapai jadwal kunjungan (meski layar HP mati/terkunci) | Alarm berbunyi nyaring (`USAGE_ALARM`), layar `SCR-20` menyala menampilkan tombol **Matikan** & **Tunda 10 Menit** |
+| AC-47 | Alarm sedang berdering di `SCR-20` | Pengguna menekan "Tunda 10 Menit (Snooze)" | Dering berhenti dan `setAlarmClock` baru terjadwal tepat +10 menit kemudian |
+| AC-48 | Pengguna membuka layar Alarm (`SCR-12`) | Menekan tombol "Tes Bunyi Alarm Sekarang" | Alarm langsung berbunyi dan menampilkan pratinjau `SCR-20` |
+| AC-49 | Aplikasi dibuka di Beranda & Detail Kunjungan v3.0 | Pengguna bernavigasi antar-tab & 3 tahap kontrol | Hero Countdown Card, Bar Kesiapan, Bento Quick Actions, dan Stepper 3 Tahap tampil mulus tanpa jank di Light & Dark Mode |
+| AC-50 | Proyek KMP dikompilasi untuk Android & iOS | Jalankan build Android & target iOS | Kedua platform memakai `commonMain` yang sama dan lulus seluruh unit & contract test |
+
+---
+
+### 32.7 Roadmap & Fase Eksekusi v3.0 (Dengan Gerbang Testing di Setiap Fase)
+
+Melanjutkan Phase 0–10 yang telah selesai, pengembangan v3.0 dibagi menjadi **6 fase terukur (Phase 11 s/d Phase 16)**:
+
+| Fase | Target Utama | Deliverable Kunci | Gerbang Pengujian (Wajib Lulus Sebelum Lanjut) |
+|---|---|---|---|
+| **Phase 11** | **Perbaikan Bug Notifikasi & Engine Alarm Berbunyi Nyaring (`F-12 v3`)** | `AlarmManager.setAlarmClock`, `AlarmForegroundService`, stream `USAGE_ALARM`, layar `SCR-20` (Full-Screen Alarm + Snooze 10 menit), jadwal Jam-H & offset kustom, perbaikan *race condition* izin, tombol **Tes Bunyi Alarm Sekarang** | Unit test `ReminderPlannerTest` v3 + uji pemicu alarm nyata & snooze + `lintDebug` |
+| **Phase 12** | **Perombakan Besar-Besaran UI/UX v3.0 ("Warm Healthcare Companion")** | Design Tokens v3.0, 4-Tab Bottom Nav, Beranda Dashboard baru (Hero Countdown, Readiness Bar, Bento Actions, Sync Pill), Detail Kunjungan **3-Step Guided Stepper**, inline answer & waveform VN, Kalender & Pencarian di Jadwal | Seluruh unit & UI test hijau + verifikasi Light/Dark mode & font scale 2.0 + `lintDebug` |
+| **Phase 13** | **Backend Self-Hosted (`server/`) untuk Ubuntu Server + Cloudflare (`unand.tech`)** | 1 Container ringan (`temankontrol-api` Ktor + **SQLite WAL Mode** `/data/db/temankontrol.db`, `mem_limit: 256m`), Auth JWT + Refresh + OTP, endpoint `/v1/sync/push`, `/v1/sync/pull`, `/v1/attachments`, `DELETE /v1/account`, halaman `/privacy`, serta `docker-compose.yml` + konfigurasi Cloudflare Tunnel `api.temankontrol.unand.tech` | Automated API & SQLite Sync integration tests + healthcheck container |
+| **Phase 14** | **Fitur Login, Akun & Offline-First Cloud Sync di Aplikasi (`F-18`)** | Layar Login/Register (`SCR-18`), Profil & Sync (`SCR-19`), Ktor Client, `OfflineFirstSyncEngine` (delta push/pull, merge Guest → Account, upload/download Foto & VN), penyimpanan token aman | Unit test `SyncEngineTest` (konflik LWW, offline queue, merge guest, restore akun) + `lintDebug` |
+| **Phase 15** | **Migrasi ke Opsi 2A — Kotlin Multiplatform (KMP) + Compose Multiplatform (Android & iPhone/iOS)** | Restrukturisasi ke `:composeApp` (`commonMain`, `androidMain`, `iosMain`) + `:iosApp`, Room KMP + DataStore KMP + Koin DI, adapter iOS (`UNUserNotificationCenter` `.caf`, `PHPicker`, `AVAudioRecorder`, `LAContext` FaceID, `UIGraphicsPDFRenderer`) | Build & test `commonTest` + `androidUnitTest` + verifikasi kompilasi source set `iosMain` |
+| **Phase 16** | **Verifikasi End-to-End v3.0, Deployment `unand.tech`, & Release Build** | Deployment Docker Compose di Ubuntu Server + Cloudflare Tunnel `api.temankontrol.unand.tech`, uji sinkronisasi lintas perangkat, `assembleRelease` v3.0.0 | Seluruh unit test, instrumented test, API sync test, & `assembleRelease` hijau |

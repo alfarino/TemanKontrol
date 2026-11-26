@@ -118,6 +118,11 @@ class RoomFollowUpRepository @Inject constructor(
         return try {
             val rows = followUpDao.delete(actionId)
             if (rows > 0) {
+                preferencesRepository.recordSyncTombstone(
+                    SyncEntityType.FOLLOW_UP,
+                    actionId,
+                    Instant.now().toEpochMilli()
+                )
                 preferencesRepository.markDataChanged()
                 reminderScheduler.rescheduleAll()
                 AppResult.Success(Unit)

@@ -7,7 +7,6 @@ import id.temankontrol.app.domain.model.FollowUpAction
 import id.temankontrol.app.domain.model.ReminderSettings
 import org.junit.Assert.*
 import org.junit.Test
-import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -18,7 +17,7 @@ class ReminderPlannerTest {
     private val zone = ZoneId.of("Asia/Jakarta")
 
     @Test
-    fun scheduledConsultation_producesVisitAndPrepareReminders() {
+    fun scheduledConsultation_producesAllV3VisitAndPrepareReminders() {
         val now = ZonedDateTime.of(LocalDate.of(2026, 11, 17), LocalTime.of(10, 0), zone).toInstant()
         val appt = ZonedDateTime.of(LocalDate.of(2026, 11, 20), LocalTime.of(14, 0), zone).toInstant()
 
@@ -46,11 +45,16 @@ class ReminderPlannerTest {
             zoneId = zone
         )
 
-        assertEquals(3, reminders.size)
+        // PREPARE_QUESTIONS (H-2), VISIT_DAY_BEFORE (H-1), VISIT_TWO_HOURS_BEFORE (-2h),
+        // VISIT_THIRTY_MINUTES_BEFORE (-30m), VISIT_AT_TIME (0m)
+        assertEquals(5, reminders.size)
         assertTrue(reminders.any { it.kind == ReminderKind.PREPARE_QUESTIONS })
         assertTrue(reminders.any { it.kind == ReminderKind.VISIT_DAY_BEFORE })
         assertTrue(reminders.any { it.kind == ReminderKind.VISIT_TWO_HOURS_BEFORE })
+        assertTrue(reminders.any { it.kind == ReminderKind.VISIT_THIRTY_MINUTES_BEFORE })
+        assertTrue(reminders.any { it.kind == ReminderKind.VISIT_AT_TIME })
         assertEquals(ReminderKind.PREPARE_QUESTIONS, reminders.first().kind)
+        assertEquals(ReminderKind.VISIT_AT_TIME, reminders.last().kind)
     }
 
     @Test
@@ -83,7 +87,46 @@ class ReminderPlannerTest {
         )
 
         assertFalse(reminders.any { it.kind == ReminderKind.PREPARE_QUESTIONS })
-        assertEquals(2, reminders.size)
+        assertEquals(4, reminders.size)
+    }
+
+    @Test
+    fun shortTermAppointment_fiveMinutesAhead_triggersExactTimeAndCustomOffset() {
+        val now = ZonedDateTime.of(LocalDate.of(2026, 11, 26), LocalTime.of(9, 0), zone).toInstant()
+        val appt = now.plusSeconds(20 * 60) // 20 minutes in the future
+
+        val c = Consultation(
+            id = ConsultationId("c-short"),
+            title = "Tes Alarm Cepat",
+            appointmentAt = appt,
+            reason = "Uji alarm",
+            facilityName = null,
+            providerName = null,
+            status = ConsultationStatus.SCHEDULED,
+            createdAt = now,
+            updatedAt = now
+        )
+
+        val reminders = ReminderPlanner.computeUpcomingReminders(
+            consultations = listOf(c),
+            questionCounts = mapOf("c-short" to 1),
+            openFollowUps = emptyList(),
+            settings = ReminderSettings(
+                backupReminderEnabled = false,
+                customLeadMinutes = 15
+            ),
+            lastBackupAt = null,
+            dataChangedSinceBackup = false,
+            firedKeys = emptySet(),
+            now = now,
+            zoneId = zone
+        )
+
+        // Should include 15-min custom offset and exact appointment time (plus missed-tolerance catchups)
+        assertTrue(reminders.any { it.kind == ReminderKind.VISIT_CUSTOM_OFFSET })
+        assertTrue(reminders.any { it.kind == ReminderKind.VISIT_AT_TIME })
+        val exactReminder = reminders.first { it.kind == ReminderKind.VISIT_AT_TIME }
+        assertEquals(appt, exactReminder.triggerAt)
     }
 
     @Test

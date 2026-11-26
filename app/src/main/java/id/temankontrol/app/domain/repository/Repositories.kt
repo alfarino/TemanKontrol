@@ -78,12 +78,18 @@ interface PreferencesRepository {
     val appLockSettings: Flow<AppLockSettings>
     val lastBackupAt: Flow<java.time.Instant?>
     val dataChangedSinceBackup: Flow<Boolean>
+    val accountSession: Flow<AccountSession?>
+    val pendingTombstones: Flow<List<SyncTombstone>>
 
     suspend fun setNoticeAccepted(): AppResult<Unit>
     suspend fun updateReminderSettings(transform: (ReminderSettings) -> ReminderSettings): AppResult<Unit>
     suspend fun updateAppLockSettings(transform: (AppLockSettings) -> AppLockSettings): AppResult<Unit>
     suspend fun recordBackupCreated(at: java.time.Instant): AppResult<Unit>
     suspend fun markDataChanged(): AppResult<Unit>
+    suspend fun saveAccountSession(session: AccountSession?): AppResult<Unit>
+    suspend fun updateLastSyncAt(epochMillis: Long): AppResult<Unit>
+    suspend fun recordSyncTombstone(entityType: SyncEntityType, entityId: String, deletedAtMillis: Long): AppResult<Unit>
+    suspend fun clearSyncTombstones(entityIds: Set<String>): AppResult<Unit>
 }
 
 interface SuggestionCatalog {

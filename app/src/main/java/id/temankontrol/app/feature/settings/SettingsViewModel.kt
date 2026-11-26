@@ -3,6 +3,7 @@ package id.temankontrol.app.feature.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import id.temankontrol.app.domain.model.AccountSession
 import id.temankontrol.app.domain.model.AppLockSettings
 import id.temankontrol.app.domain.model.AppLockTimeout
 import id.temankontrol.app.domain.model.ReminderSettings
@@ -15,7 +16,8 @@ import javax.inject.Inject
 data class SettingsUiState(
     val lastBackupAt: Instant? = null,
     val reminderSettings: ReminderSettings = ReminderSettings(),
-    val appLockSettings: AppLockSettings = AppLockSettings()
+    val appLockSettings: AppLockSettings = AppLockSettings(),
+    val accountSession: AccountSession? = null
 )
 
 @HiltViewModel
@@ -26,12 +28,14 @@ class SettingsViewModel @Inject constructor(
     val uiState: StateFlow<SettingsUiState> = combine(
         preferencesRepository.lastBackupAt,
         preferencesRepository.reminderSettings,
-        preferencesRepository.appLockSettings
-    ) { lastBackup, reminder, lock ->
+        preferencesRepository.appLockSettings,
+        preferencesRepository.accountSession
+    ) { lastBackup, reminder, lock, session ->
         SettingsUiState(
             lastBackupAt = lastBackup,
             reminderSettings = reminder,
-            appLockSettings = lock
+            appLockSettings = lock,
+            accountSession = session
         )
     }.stateIn(
         scope = viewModelScope,

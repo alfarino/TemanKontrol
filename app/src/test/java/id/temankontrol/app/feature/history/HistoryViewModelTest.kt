@@ -79,4 +79,20 @@ class HistoryViewModelTest {
         assertEquals(StatusFilter.CANCELLED, state.filter)
         assertTrue(state.consultations.all { it.status == ConsultationStatus.CANCELLED })
     }
+
+    @Test
+    fun setSearchQuery_filtersConsultationsByTitleOrFacility() = runTest(testDispatcher) {
+        val viewModel = HistoryViewModel(repository, SavedStateHandle())
+        val initial = viewModel.uiState.filter { !it.isLoading }.first()
+        val sampleTitle = initial.consultations.first().title
+
+        viewModel.setSearchQuery(sampleTitle)
+        val filtered = viewModel.uiState.filter { !it.isLoading && it.searchQuery == sampleTitle }.first()
+        assertTrue(filtered.consultations.isNotEmpty())
+        assertTrue(filtered.consultations.all { it.title.contains(sampleTitle, ignoreCase = true) })
+
+        viewModel.setSearchQuery("TIDAK_ADA_KUNJUNGAN_XYZ_999")
+        val emptyResult = viewModel.uiState.filter { !it.isLoading && it.searchQuery == "TIDAK_ADA_KUNJUNGAN_XYZ_999" }.first()
+        assertTrue(emptyResult.consultations.isEmpty())
+    }
 }

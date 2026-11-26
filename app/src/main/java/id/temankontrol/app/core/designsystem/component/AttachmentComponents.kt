@@ -457,14 +457,12 @@ private fun VoiceNotePlayerCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                LinearProgressIndicator(
-                    progress = { (elapsedMs.toFloat() / totalMs.toFloat()).coerceIn(0f, 1f) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp)
-                        .clip(RoundedCornerShape(2.dp))
+                AudioWaveformBars(
+                    progress = (elapsedMs.toFloat() / totalMs.toFloat()).coerceIn(0f, 1f),
+                    isActive = isPlaying,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
@@ -885,6 +883,15 @@ private fun VoiceRecorderBottomSheet(
                 color = if (isRecording && !isPaused) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
             )
 
+            AudioWaveformBars(
+                progress = if (isRecording) ((elapsedMs % 20_000L).toFloat() / 20_000f).coerceIn(0.15f, 1f) else 0f,
+                isActive = isRecording && !isPaused,
+                barCount = 28,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
+            )
+
             Text(
                 text = when {
                     isRecording && !isPaused -> "Sedang merekam… ketuk ikon untuk jeda."
@@ -1059,6 +1066,58 @@ fun formatDuration(ms: Long): String {
     val min = totalSec / 60L
     val sec = totalSec % 60L
     return String.format(Locale.US, "%02d:%02d", min, sec)
+}
+
+@Composable
+fun AudioWaveformBars(
+    progress: Float,
+    isActive: Boolean,
+    modifier: Modifier = Modifier,
+    barCount: Int = 22
+) {
+    val weights = remember(barCount) {
+        List(barCount) { idx ->
+            val pattern = listOf(0.32f, 0.58f, 0.85f, 0.48f, 0.95f, 0.64f, 0.40f, 0.78f)
+            pattern[idx % pattern.size]
+        }
+    }
+    val infiniteTransition = rememberInfiniteTransition(label = "waveform_anim")
+    val phase by infiniteTransition.animateFloat(
+        initialValue = 0.75f,
+        targetValue = 1.25f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(420),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "waveform_phase"
+    )
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        modifier = modifier.height(22.dp)
+    ) {
+        weights.forEachIndexed { index, baseFraction ->
+            val barRatio = index.toFloat() / barCount.coerceAtLeast(1).toFloat()
+            val isFilled = barRatio <= progress || (isActive && progress == 0f)
+            val dynamicFraction = if (isActive) {
+                val factor = if (index % 2 == 0) phase else (2f - phase)
+                (baseFraction * factor).coerceIn(0.22f, 1f)
+            } else {
+                baseFraction
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(dynamicFraction)
+                    .clip(RoundedCornerShape(50))
+                    .background(
+                        if (isFilled) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.30f)
+                    )
+            )
+        }
+    }
 }
 
 fun formatSizeKb(bytes: Long): String {

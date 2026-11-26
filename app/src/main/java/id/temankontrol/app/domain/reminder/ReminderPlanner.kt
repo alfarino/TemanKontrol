@@ -14,10 +14,27 @@ import java.time.temporal.ChronoUnit
 enum class ReminderKind {
     VISIT_DAY_BEFORE,
     VISIT_TWO_HOURS_BEFORE,
+    VISIT_THIRTY_MINUTES_BEFORE,
+    VISIT_CUSTOM_OFFSET,
+    VISIT_AT_TIME,
+    VISIT_SNOOZED,
     PREPARE_QUESTIONS,
     FOLLOW_UP_DUE,
     FOLLOW_UP_OVERDUE,
-    BACKUP_PERIODIC
+    BACKUP_PERIODIC;
+
+    fun isVisitAlarmCandidate(): Boolean = when (this) {
+        VISIT_DAY_BEFORE,
+        VISIT_TWO_HOURS_BEFORE,
+        VISIT_THIRTY_MINUTES_BEFORE,
+        VISIT_CUSTOM_OFFSET,
+        VISIT_AT_TIME,
+        VISIT_SNOOZED -> true
+        PREPARE_QUESTIONS,
+        FOLLOW_UP_DUE,
+        FOLLOW_UP_OVERDUE,
+        BACKUP_PERIODIC -> false
+    }
 }
 
 data class ScheduledReminder(
@@ -91,6 +108,64 @@ object ReminderPlanner {
                                     triggerAt = if (twoHours.isBefore(now)) now.plusSeconds(10) else twoHours
                                 )
                             )
+                        }
+                    }
+
+                    // 30 minutes before appointment (FR-070)
+                    if (settings.visitThirtyMinBeforeEnabled) {
+                        val thirtyMin = c.appointmentAt.minus(30, ChronoUnit.MINUTES)
+                        if (thirtyMin.isAfter(toleranceCutoff) && thirtyMin.isBefore(c.appointmentAt)) {
+                            val key = "${ReminderKind.VISIT_THIRTY_MINUTES_BEFORE.name}:${c.id.value}:${thirtyMin.toEpochMilli()}"
+                            if (key !in firedKeys) {
+                                out.add(
+                                    ScheduledReminder(
+                                        key = key,
+                                        kind = ReminderKind.VISIT_THIRTY_MINUTES_BEFORE,
+                                        refId = c.id.value,
+                                        titleIfUnlocked = c.title,
+                                        triggerAt = if (thirtyMin.isBefore(now)) now.plusSeconds(8) else thirtyMin
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    // Custom lead offset before appointment (FR-070)
+                    val customMinutes = settings.customLeadMinutes
+                    if (customMinutes != null && customMinutes > 0 && customMinutes != 30 && customMinutes != 120) {
+                        val customAt = c.appointmentAt.minus(customMinutes.toLong(), ChronoUnit.MINUTES)
+                        if (customAt.isAfter(toleranceCutoff) && customAt.isBefore(c.appointmentAt)) {
+                            val key = "${ReminderKind.VISIT_CUSTOM_OFFSET.name}:${c.id.value}:$customMinutes:${customAt.toEpochMilli()}"
+                            if (key !in firedKeys) {
+                                out.add(
+                                    ScheduledReminder(
+                                        key = key,
+                                        kind = ReminderKind.VISIT_CUSTOM_OFFSET,
+                                        refId = c.id.value,
+                                        titleIfUnlocked = c.title,
+                                        triggerAt = if (customAt.isBefore(now)) now.plusSeconds(6) else customAt
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    // Exact appointment time (0 min / Jam-H) (FR-070)
+                    if (settings.visitAtTimeEnabled) {
+                        val exactAt = c.appointmentAt
+                        if (exactAt.isAfter(toleranceCutoff)) {
+                            val key = "${ReminderKind.VISIT_AT_TIME.name}:${c.id.value}:${exactAt.toEpochMilli()}"
+                            if (key !in firedKeys) {
+                                out.add(
+                                    ScheduledReminder(
+                                        key = key,
+                                        kind = ReminderKind.VISIT_AT_TIME,
+                                        refId = c.id.value,
+                                        titleIfUnlocked = c.title,
+                                        triggerAt = if (exactAt.isBefore(now)) now.plusSeconds(5) else exactAt
+                                    )
+                                )
+                            }
                         }
                     }
                 }

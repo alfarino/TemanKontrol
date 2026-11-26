@@ -12,12 +12,17 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import id.temankontrol.app.core.common.AppError
 import id.temankontrol.app.core.common.AppResult
+import id.temankontrol.app.domain.model.AccountSession
 import id.temankontrol.app.domain.model.AppLockSettings
 import id.temankontrol.app.domain.model.AppLockTimeout
 import id.temankontrol.app.domain.model.ReminderSettings
+import id.temankontrol.app.domain.model.SyncEntityType
+import id.temankontrol.app.domain.model.SyncTombstone
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -28,10 +33,16 @@ val Context.userPreferencesDataStore: DataStore<Preferences> by preferencesDataS
 class UserPreferencesDataStore @Inject constructor(
     private val dataStore: DataStore<Preferences>
 ) {
+    private val json = Json { ignoreUnknownKeys = true }
+
     private object Keys {
         val NOTICE_ACCEPTED = booleanPreferencesKey("notice_accepted")
         val REMINDER_VISIT_ENABLED = booleanPreferencesKey("reminder_visit_enabled")
         val REMINDER_VISIT_HOUR = intPreferencesKey("reminder_visit_hour")
+        val REMINDER_VISIT_30M_ENABLED = booleanPreferencesKey("reminder_visit_30m_enabled")
+        val REMINDER_VISIT_AT_TIME_ENABLED = booleanPreferencesKey("reminder_visit_at_time_enabled")
+        val REMINDER_CUSTOM_LEAD_MINUTES = intPreferencesKey("reminder_custom_lead_minutes")
+        val REMINDER_ALARM_SOUND_MODE = booleanPreferencesKey("reminder_alarm_sound_mode")
         val REMINDER_PREPARE_ENABLED = booleanPreferencesKey("reminder_prepare_enabled")
         val REMINDER_FOLLOWUP_ENABLED = booleanPreferencesKey("reminder_followup_enabled")
         val REMINDER_FOLLOWUP_HOUR = intPreferencesKey("reminder_followup_hour")
@@ -42,6 +53,8 @@ class UserPreferencesDataStore @Inject constructor(
         val SECURE_SCREEN = booleanPreferencesKey("secure_screen")
         val LAST_BACKUP_AT = longPreferencesKey("last_backup_at")
         val DATA_CHANGED_SINCE_BACKUP = booleanPreferencesKey("data_changed_since_backup")
+        val ACCOUNT_SESSION_JSON = stringPreferencesKey("account_session_json")
+        val SYNC_TOMBSTONES_JSON = stringPreferencesKey("sync_tombstones_json")
     }
 
     private val safeData: Flow<Preferences> = dataStore.data
@@ -50,9 +63,14 @@ class UserPreferencesDataStore @Inject constructor(
     val noticeAccepted: Flow<Boolean> = safeData.map { it[Keys.NOTICE_ACCEPTED] ?: false }
 
     val reminderSettings: Flow<ReminderSettings> = safeData.map { prefs ->
+        val customLead = prefs[Keys.REMINDER_CUSTOM_LEAD_MINUTES]?.takeIf { it > 0 }
         ReminderSettings(
             visitReminderEnabled = prefs[Keys.REMINDER_VISIT_ENABLED] ?: true,
             visitReminderHour = prefs[Keys.REMINDER_VISIT_HOUR] ?: 19,
+            visitThirtyMinBeforeEnabled = prefs[Keys.REMINDER_VISIT_30M_ENABLED] ?: true,
+            visitAtTimeEnabled = prefs[Keys.REMINDER_VISIT_AT_TIME_ENABLED] ?: true,
+            customLeadMinutes = customLead,
+            alarmSoundModeEnabled = prefs[Keys.REMINDER_ALARM_SOUND_MODE] ?: true,
             prepareReminderEnabled = prefs[Keys.REMINDER_PREPARE_ENABLED] ?: true,
             followUpReminderEnabled = prefs[Keys.REMINDER_FOLLOWUP_ENABLED] ?: true,
             followUpReminderHour = prefs[Keys.REMINDER_FOLLOWUP_HOUR] ?: 8,
@@ -81,6 +99,18 @@ class UserPreferencesDataStore @Inject constructor(
         prefs[Keys.DATA_CHANGED_SINCE_BACKUP] ?: true
     }
 
+    val accountSession: Flow<AccountSession?> = safeData.map { prefs ->
+        prefs[Keys.ACCOUNT_SESSION_JSON]?.let { raw ->
+            runCatching { json.decodeFromString<AccountSession>(raw) }.getOrNull()
+        }
+    }
+
+    val pendingTombstones: Flow<List<SyncTombstone>> = safeData.map { prefs ->
+        prefs[Keys.SYNC_TOMBSTONES_JSON]?.let { raw ->
+            runCatching { json.decodeFromString<List<SyncTombstone>>(raw) }.getOrNull()
+        }.orEmpty()
+    }
+
     suspend fun setNoticeAccepted(): AppResult<Unit> = safeEdit { prefs ->
         prefs[Keys.NOTICE_ACCEPTED] = true
     }
@@ -90,6 +120,10 @@ class UserPreferencesDataStore @Inject constructor(
             val current = ReminderSettings(
                 visitReminderEnabled = prefs[Keys.REMINDER_VISIT_ENABLED] ?: true,
                 visitReminderHour = prefs[Keys.REMINDER_VISIT_HOUR] ?: 19,
+                visitThirtyMinBeforeEnabled = prefs[Keys.REMINDER_VISIT_30M_ENABLED] ?: true,
+                visitAtTimeEnabled = prefs[Keys.REMINDER_VISIT_AT_TIME_ENABLED] ?: true,
+                customLeadMinutes = prefs[Keys.REMINDER_CUSTOM_LEAD_MINUTES]?.takeIf { it > 0 },
+                alarmSoundModeEnabled = prefs[Keys.REMINDER_ALARM_SOUND_MODE] ?: true,
                 prepareReminderEnabled = prefs[Keys.REMINDER_PREPARE_ENABLED] ?: true,
                 followUpReminderEnabled = prefs[Keys.REMINDER_FOLLOWUP_ENABLED] ?: true,
                 followUpReminderHour = prefs[Keys.REMINDER_FOLLOWUP_HOUR] ?: 8,
@@ -99,6 +133,10 @@ class UserPreferencesDataStore @Inject constructor(
             val updated = transform(current)
             prefs[Keys.REMINDER_VISIT_ENABLED] = updated.visitReminderEnabled
             prefs[Keys.REMINDER_VISIT_HOUR] = updated.visitReminderHour
+            prefs[Keys.REMINDER_VISIT_30M_ENABLED] = updated.visitThirtyMinBeforeEnabled
+            prefs[Keys.REMINDER_VISIT_AT_TIME_ENABLED] = updated.visitAtTimeEnabled
+            prefs[Keys.REMINDER_CUSTOM_LEAD_MINUTES] = updated.customLeadMinutes ?: 0
+            prefs[Keys.REMINDER_ALARM_SOUND_MODE] = updated.alarmSoundModeEnabled
             prefs[Keys.REMINDER_PREPARE_ENABLED] = updated.prepareReminderEnabled
             prefs[Keys.REMINDER_FOLLOWUP_ENABLED] = updated.followUpReminderEnabled
             prefs[Keys.REMINDER_FOLLOWUP_HOUR] = updated.followUpReminderHour
@@ -127,6 +165,44 @@ class UserPreferencesDataStore @Inject constructor(
 
     suspend fun markDataChanged(): AppResult<Unit> = safeEdit { prefs ->
         prefs[Keys.DATA_CHANGED_SINCE_BACKUP] = true
+    }
+
+    suspend fun saveAccountSession(session: AccountSession?): AppResult<Unit> = safeEdit { prefs ->
+        if (session == null) {
+            prefs.remove(Keys.ACCOUNT_SESSION_JSON)
+        } else {
+            prefs[Keys.ACCOUNT_SESSION_JSON] = json.encodeToString(session)
+        }
+    }
+
+    suspend fun updateLastSyncAt(epochMillis: Long): AppResult<Unit> = safeEdit { prefs ->
+        val current = prefs[Keys.ACCOUNT_SESSION_JSON]?.let { raw ->
+            runCatching { json.decodeFromString<AccountSession>(raw) }.getOrNull()
+        }
+        if (current != null) {
+            prefs[Keys.ACCOUNT_SESSION_JSON] = json.encodeToString(current.copy(lastSyncAtMillis = epochMillis))
+        }
+    }
+
+    suspend fun recordSyncTombstone(
+        entityType: SyncEntityType,
+        entityId: String,
+        deletedAtMillis: Long
+    ): AppResult<Unit> = safeEdit { prefs ->
+        val existing = prefs[Keys.SYNC_TOMBSTONES_JSON]?.let { raw ->
+            runCatching { json.decodeFromString<List<SyncTombstone>>(raw) }.getOrNull()
+        }.orEmpty()
+        val updated = existing.filterNot { it.entityType == entityType && it.entityId == entityId } +
+            SyncTombstone(entityType, entityId, deletedAtMillis)
+        prefs[Keys.SYNC_TOMBSTONES_JSON] = json.encodeToString(updated)
+    }
+
+    suspend fun clearSyncTombstones(entityIds: Set<String>): AppResult<Unit> = safeEdit { prefs ->
+        val existing = prefs[Keys.SYNC_TOMBSTONES_JSON]?.let { raw ->
+            runCatching { json.decodeFromString<List<SyncTombstone>>(raw) }.getOrNull()
+        }.orEmpty()
+        val remaining = existing.filterNot { it.entityId in entityIds }
+        prefs[Keys.SYNC_TOMBSTONES_JSON] = json.encodeToString(remaining)
     }
 
     private suspend fun safeEdit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit): AppResult<Unit> {

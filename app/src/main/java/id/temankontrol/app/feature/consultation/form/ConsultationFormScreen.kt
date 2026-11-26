@@ -42,9 +42,19 @@ fun ConsultationFormScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var showUnsavedDialog by remember { mutableStateOf(false) }
 
+    var pendingSubmitAfterPermission by remember { mutableStateOf(false) }
+
     val notifLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
-    ) { _ -> }
+    ) { _ ->
+        if (pendingSubmitAfterPermission) {
+            pendingSubmitAfterPermission = false
+            viewModel.submit(
+                onSuccess = onSuccess,
+                onError = { /* show in snackbar */ }
+            )
+        }
+    }
 
     val handleBack = {
         if (uiState.isDirty) {
@@ -77,18 +87,19 @@ fun ConsultationFormScreen(
         onDateChange = viewModel::onDateChange,
         onTimeChange = viewModel::onTimeChange,
         onSubmit = {
-            viewModel.submit(
-                onSuccess = { newId ->
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
-                        PackageManager.PERMISSION_GRANTED
-                    ) {
-                        notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                    onSuccess(newId)
-                },
-                onError = { /* show in snackbar */ }
-            )
+            // FR-072: Request POST_NOTIFICATIONS before saving & navigating so alarm scheduling is never raced
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                pendingSubmitAfterPermission = true
+                notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                viewModel.submit(
+                    onSuccess = onSuccess,
+                    onError = { /* show in snackbar */ }
+                )
+            }
         }
     )
 }

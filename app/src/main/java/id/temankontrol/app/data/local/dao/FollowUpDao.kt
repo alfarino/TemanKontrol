@@ -37,6 +37,9 @@ interface FollowUpDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(action: FollowUpActionEntity): Long
 
+    @Upsert
+    suspend fun upsertSync(action: FollowUpActionEntity): Long
+
     @Update
     suspend fun update(action: FollowUpActionEntity): Int
 

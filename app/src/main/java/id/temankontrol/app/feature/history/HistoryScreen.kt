@@ -1,9 +1,14 @@
-﻿package id.temankontrol.app.feature.history
+package id.temankontrol.app.feature.history
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -19,6 +24,7 @@ import id.temankontrol.app.domain.model.StatusFilter
 @Composable
 fun HistoryScreen(
     onNavigateToDetail: (String) -> Unit,
+    onNavigateToCreate: () -> Unit = {},
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -26,7 +32,9 @@ fun HistoryScreen(
     HistoryContent(
         uiState = uiState,
         onFilterSelected = viewModel::setFilter,
-        onConsultationClick = onNavigateToDetail
+        onSearchQueryChange = viewModel::setSearchQuery,
+        onConsultationClick = onNavigateToDetail,
+        onCreateClick = onNavigateToCreate
     )
 }
 
@@ -35,13 +43,25 @@ fun HistoryContent(
     uiState: HistoryUiState,
     onFilterSelected: (StatusFilter) -> Unit,
     onConsultationClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSearchQueryChange: (String) -> Unit = {},
+    onCreateClick: () -> Unit = {}
 ) {
     AppScaffold(
         topBar = {
             AppTopBar(
-                title = stringResource(R.string.nav_history)
+                title = "Jadwal & Riwayat Kunjungan"
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onCreateClick,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add_consultation))
+            }
         },
         modifier = modifier
     ) { padding ->
@@ -50,9 +70,31 @@ fun HistoryContent(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            // Search Bar (FR-078)
+            OutlinedTextField(
+                value = uiState.searchQuery,
+                onValueChange = onSearchQueryChange,
+                placeholder = { Text("Cari judul kunjungan atau fasilitas kesehatan…") },
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = null)
+                },
+                trailingIcon = {
+                    if (uiState.searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { onSearchQueryChange("") }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Bersihkan pencarian")
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
             // Filter Chips
             LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -76,9 +118,18 @@ fun HistoryContent(
                     LoadingView(modifier = Modifier.fillMaxSize())
                 }
                 uiState.consultations.isEmpty() -> {
-                    if (uiState.filter == StatusFilter.ALL) {
+                    if (uiState.searchQuery.isNotBlank()) {
+                        EmptyView(
+                            title = "Tidak ditemukan kunjungan untuk \"${uiState.searchQuery}\".",
+                            actionText = "Reset Pencarian",
+                            onActionClick = { onSearchQueryChange("") },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else if (uiState.filter == StatusFilter.ALL) {
                         EmptyView(
                             title = stringResource(R.string.empty_history_title),
+                            actionText = stringResource(R.string.action_add_consultation),
+                            onActionClick = onCreateClick,
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
@@ -96,7 +147,7 @@ fun HistoryContent(
                             start = 16.dp,
                             end = 16.dp,
                             top = 8.dp,
-                            bottom = 24.dp
+                            bottom = 88.dp
                         ),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.fillMaxSize()

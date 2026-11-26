@@ -3,7 +3,10 @@
 
     <!-- Navigasi -->
     <string name="nav_home">Beranda</string>
+    <string name="nav_schedule">Jadwal</string>
     <string name="nav_history">Riwayat</string>
+    <string name="nav_alarm">Alarm</string>
+    <string name="nav_account">Akun</string>
     <string name="nav_about">Tentang</string>
     <string name="nav_settings">Pengaturan</string>
 

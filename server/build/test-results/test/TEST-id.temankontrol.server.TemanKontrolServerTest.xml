@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="id.temankontrol.server.TemanKontrolServerTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-26T07:05:26.428Z" hostname="ALPHA-DSKTP1385" time="1.192">
+  <properties/>
+  <testcase name="healthAndPrivacyEndpoints_returnSqliteWalAndPolicyHtml" classname="id.temankontrol.server.TemanKontrolServerTest" time="0.904"/>
+  <testcase name="authSyncAttachmentsAndAccountDeletion_endToEndFlow" classname="id.temankontrol.server.TemanKontrolServerTest" time="0.285"/>
+  <system-out><![CDATA[14:05:26.885 [DefaultDispatcher-worker-2 @call-context#3] INFO io.ktor.test -- No ktor.deployment.watch patterns specified, automatic reload is not active.
+14:05:27.155 [DefaultDispatcher-worker-2 @call-context#3] INFO io.ktor.test -- Application started in 0.279 seconds.
+14:05:27.157 [DefaultDispatcher-worker-3 @coroutine#4] INFO io.ktor.test -- Responding at http://localhost:80
+14:05:27.157 [DefaultDispatcher-worker-3 @coroutine#4] INFO io.ktor.test -- Responding at https://localhost:443
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

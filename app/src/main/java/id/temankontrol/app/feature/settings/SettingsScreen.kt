@@ -3,9 +3,12 @@ package id.temankontrol.app.feature.settings
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -15,6 +18,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -29,12 +35,19 @@ import id.temankontrol.app.core.designsystem.component.DateUtils
 import id.temankontrol.app.core.designsystem.component.SectionCard
 import id.temankontrol.app.domain.model.AppLockTimeout
 import id.temankontrol.app.feature.lock.AppLockOverlay
+import id.temankontrol.app.ui.theme.HeroTealEndDark
+import id.temankontrol.app.ui.theme.HeroTealEndLight
+import id.temankontrol.app.ui.theme.HeroTealStartDark
+import id.temankontrol.app.ui.theme.HeroTealStartLight
 
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToBackup: () -> Unit,
     onNavigateToReminders: () -> Unit,
+    onNavigateToAbout: () -> Unit = {},
+    onNavigateToAccount: () -> Unit = {},
+    onNavigateToLogin: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -59,6 +72,9 @@ fun SettingsScreen(
         onNavigateBack = onNavigateBack,
         onNavigateToBackup = onNavigateToBackup,
         onNavigateToReminders = onNavigateToReminders,
+        onNavigateToAbout = onNavigateToAbout,
+        onNavigateToAccount = onNavigateToAccount,
+        onNavigateToLogin = onNavigateToLogin,
         onToggleAppLock = viewModel::setAppLockEnabled,
         onSelectTimeout = viewModel::setAppLockTimeout,
         onToggleSecureScreen = viewModel::setSecureScreen,
@@ -77,13 +93,19 @@ fun SettingsContent(
     onSelectTimeout: (AppLockTimeout) -> Unit,
     onToggleSecureScreen: (Boolean) -> Unit,
     onPreviewLockScreen: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onNavigateToAbout: () -> Unit = {},
+    onNavigateToAccount: () -> Unit = {},
+    onNavigateToLogin: () -> Unit = {}
 ) {
+    val isDark = isSystemInDarkTheme()
+    val gradientStart = if (isDark) HeroTealStartDark else HeroTealStartLight
+    val gradientEnd = if (isDark) HeroTealEndDark else HeroTealEndLight
+
     AppScaffold(
         topBar = {
             AppTopBar(
-                title = stringResource(R.string.settings_title),
-                onNavigateBack = onNavigateBack
+                title = "Akun, Cadangan & Pengaturan"
             )
         },
         modifier = modifier
@@ -96,6 +118,63 @@ fun SettingsContent(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // 0. Kartu Profil, Mode Offline-First & Cloud Sync unand.tech (v3.0)
+            val session = uiState.accountSession
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = if (session != null) onNavigateToAccount else onNavigateToLogin)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Brush.linearGradient(listOf(gradientStart, gradientEnd)))
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f))
+                        ) {
+                            Icon(
+                                imageVector = if (session != null) Icons.Default.VerifiedUser else Icons.Default.AccountCircle,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(30.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = session?.displayName ?: "Mode Lokal (Tanpa Akun)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = if (session != null) {
+                                    "${session.email} • Tersambung ke unand.tech"
+                                } else {
+                                    "Ketuk untuk Masuk / Daftar akun pemulihan cloud (api.temankontrol.unand.tech)"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.9f)
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = Color.White
+                        )
+                    }
+                }
+            }
+
             // 1. Cadangan & Pemulihan (F-10)
             val backupSubtitle = if (uiState.lastBackupAt == null) {
                 "Belum pernah dicadangkan • Lindungi data bila HP rusak"
@@ -110,7 +189,7 @@ fun SettingsContent(
                 onClick = onNavigateToBackup
             )
 
-            // 2. Pengingat & Notifikasi Lokal (F-12)
+            // 2. Pengingat & Alarm Berbunyi (F-12 v3)
             val activeCount = listOf(
                 uiState.reminderSettings.visitReminderEnabled,
                 uiState.reminderSettings.prepareReminderEnabled,
@@ -118,9 +197,9 @@ fun SettingsContent(
                 uiState.reminderSettings.backupReminderEnabled
             ).count { it }
             SettingsNavCard(
-                icon = Icons.Default.Notifications,
-                title = stringResource(R.string.reminder_title),
-                subtitle = "$activeCount jenis pengingat aktif • Privasi layar kunci ${if (uiState.reminderSettings.showTitleOnLockScreen) "Terbuka" else "Privat"}",
+                icon = Icons.Default.Alarm,
+                title = "Pusat Alarm & Pengingat",
+                subtitle = "$activeCount pengingat aktif • Mode Alarm ${if (uiState.reminderSettings.alarmSoundModeEnabled) "Berbunyi Nyaring" else "Notifikasi"}",
                 onClick = onNavigateToReminders
             )
 
@@ -223,6 +302,14 @@ fun SettingsContent(
                     }
                 }
             }
+
+            // 4. Tentang Aplikasi, Privasi & Skenario Uji (SCR-09)
+            SettingsNavCard(
+                icon = Icons.Default.Info,
+                title = "Tentang Teman Kontrol & Privasi",
+                subtitle = "Informasi versi, batas penggunaan, dan penguji skenario data",
+                onClick = onNavigateToAbout
+            )
         }
     }
 }
@@ -238,8 +325,9 @@ private fun SettingsNavCard(
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)

@@ -47,6 +47,40 @@ class ReminderSettingsViewModel @Inject constructor(
         }
     }
 
+    fun setVisitThirtyMinBeforeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateReminderSettings { it.copy(visitThirtyMinBeforeEnabled = enabled) }
+            reminderScheduler.rescheduleAll()
+        }
+    }
+
+    fun setVisitAtTimeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateReminderSettings { it.copy(visitAtTimeEnabled = enabled) }
+            reminderScheduler.rescheduleAll()
+        }
+    }
+
+    fun setCustomLeadMinutes(minutes: Int?) {
+        viewModelScope.launch {
+            preferencesRepository.updateReminderSettings { it.copy(customLeadMinutes = minutes) }
+            reminderScheduler.rescheduleAll()
+        }
+    }
+
+    fun setAlarmSoundModeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateReminderSettings { it.copy(alarmSoundModeEnabled = enabled) }
+            reminderScheduler.rescheduleAll()
+        }
+    }
+
+    fun triggerTestAlarm() {
+        viewModelScope.launch {
+            reminderScheduler.triggerTestAlarmNow()
+        }
+    }
+
     fun setPrepareReminderEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.updateReminderSettings { it.copy(prepareReminderEnabled = enabled) }
@@ -82,6 +116,12 @@ class ReminderSettingsViewModel @Inject constructor(
     }
 
     fun setHasNotificationPermission(granted: Boolean) {
+        val wasGranted = _hasPermission.value
         _hasPermission.value = granted
+        if (granted && !wasGranted) {
+            viewModelScope.launch {
+                reminderScheduler.rescheduleAll()
+            }
+        }
     }
 }
