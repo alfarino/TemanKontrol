@@ -5,7 +5,7 @@ plugins {
 }
 
 application {
-    mainClass.set("id.temankontrol.server.MainKt")
+    mainClass.set("id.temankontrol.server.TemanKontrolServerKt")
 }
 
 kotlin {
@@ -35,8 +35,9 @@ tasks.register<Jar>("fatJar") {
     archiveClassifier.set("all")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     manifest {
-        attributes["Main-Class"] = "id.temankontrol.server.MainKt"
+        attributes["Main-Class"] = "id.temankontrol.server.TemanKontrolServerKt"
     }
+    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
     from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
     with(tasks.jar.get() as CopySpec)
 }
