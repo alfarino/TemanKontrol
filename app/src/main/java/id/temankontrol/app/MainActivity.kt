@@ -20,6 +20,7 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import id.temankontrol.app.data.local.DatabaseSeeder
 import id.temankontrol.app.data.reminder.ReminderNotificationHelper
+import id.temankontrol.app.data.sync.CloudAutoSyncCoordinator
 import id.temankontrol.app.domain.model.AppLockSettings
 import id.temankontrol.app.domain.repository.PreferencesRepository
 import id.temankontrol.app.feature.lock.AppLockOverlay
@@ -37,6 +38,9 @@ class MainActivity : FragmentActivity() {
 
     @Inject
     lateinit var databaseSeeder: DatabaseSeeder
+
+    @Inject
+    lateinit var cloudAutoSyncCoordinator: CloudAutoSyncCoordinator
 
     private var initialReady by mutableStateOf(false)
     private var initialNoticeAccepted by mutableStateOf(false)
@@ -130,6 +134,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onStart() {
         super.onStart()
+        cloudAutoSyncCoordinator.onAppForeground()
         if (!initialReady) return
         if (currentLockSettings.enabled) {
             if (!canAuthenticateDevice()) {

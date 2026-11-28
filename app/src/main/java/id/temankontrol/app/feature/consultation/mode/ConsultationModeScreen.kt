@@ -2,6 +2,7 @@ package id.temankontrol.app.feature.consultation.mode
 
 import android.app.Activity
 import android.view.WindowManager
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import id.temankontrol.app.R
 import id.temankontrol.app.core.designsystem.component.*
 import id.temankontrol.app.domain.model.Attachment
+import kotlinx.coroutines.launch
 
 @Composable
 fun ConsultationModeScreen(
@@ -33,6 +35,8 @@ fun ConsultationModeScreen(
     viewModel: ConsultationModeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     // Keep screen on during Mode Konsultasi (F-15)
     val view = LocalView.current
@@ -47,18 +51,23 @@ fun ConsultationModeScreen(
     ConsultationModeContent(
         uiState = uiState,
         consultationId = viewModel.consultationIdString,
+        snackbarHostState = snackbarHostState,
         onNavigateBack = {
             uiState.currentQuestion?.let { viewModel.saveCurrentAnswer(it.id) }
             onNavigateBack()
         },
         onToggleDiscussed = viewModel::toggleDiscussed,
         onAnswerChange = viewModel::onAnswerDraftChange,
-        onSaveAnswer = viewModel::saveCurrentAnswer,
+        onSaveAnswer = { qId ->
+            viewModel.saveCurrentAnswer(qId)
+            scope.launch { snackbarHostState.showSnackbar("Jawaban tersimpan.") }
+        },
         onPrevious = viewModel::previousQuestion,
         onNext = viewModel::nextQuestion,
         onAddPhoto = viewModel::addPhoto,
         onAddVoiceNote = viewModel::addVoiceNote,
         onDeleteAttachment = viewModel::deleteAttachment,
+        onUpdateAttachmentCaption = viewModel::updateAttachmentCaption,
         onNavigateToNotes = { onNavigateToNotes(viewModel.consultationIdString) },
         onNavigateToQuestions = { onNavigateToQuestions(viewModel.consultationIdString) },
         onMarkCompleted = { viewModel.markConsultationCompleted(onDone = onNavigateBack) }
@@ -81,7 +90,9 @@ fun ConsultationModeContent(
     onNavigateToNotes: () -> Unit,
     onNavigateToQuestions: () -> Unit,
     onMarkCompleted: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onUpdateAttachmentCaption: (String, String?) -> Unit = { _, _ -> }
 ) {
     AppScaffold(
         topBar = {
@@ -90,6 +101,7 @@ fun ConsultationModeContent(
                 onNavigateBack = onNavigateBack
             )
         },
+        snackbarHostState = snackbarHostState,
         modifier = modifier
     ) { padding ->
         when {
@@ -121,7 +133,7 @@ fun ConsultationModeContent(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Konsultasi Selesai Ditinjau",
+                        text = "Semua Pertanyaan Ditinjau",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -134,26 +146,36 @@ fun ConsultationModeContent(
                     Spacer(modifier = Modifier.height(28.dp))
                     Button(
                         onClick = onNavigateToNotes,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(14.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp)
                     ) {
-                        Text("Isi Hasil Konsultasi")
+                        Text("Isi Hasil Konsultasi", fontWeight = FontWeight.Bold)
                     }
                     Spacer(modifier = Modifier.height(10.dp))
-                    OutlinedButton(
+                    FilledTonalButton(
                         onClick = onMarkCompleted,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(14.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp)
                     ) {
                         Text("Tandai Kunjungan Selesai")
                     }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedButton(
+                        onClick = onNavigateBack,
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Text("Kembali ke Detail Kunjungan")
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     TextButton(onClick = onPrevious) {
-                        Text("Kembali ke Pertanyaan Terakhir")
+                        Text("Tinjau Ulang Pertanyaan Terakhir")
                     }
                 }
             }
@@ -188,74 +210,98 @@ fun ConsultationModeContent(
                     Spacer(modifier = Modifier.height(6.dp))
                     LinearProgressIndicator(
                         progress = { progress },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Scrollable focus card
                     Column(
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
                         modifier = Modifier
                             .weight(1f)
                             .verticalScroll(rememberScrollState())
                     ) {
-                        Card(
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                        ElevatedCard(
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.elevatedCardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
                             ),
+                            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Column(modifier = Modifier.padding(20.dp)) {
-                                Text(
-                                    text = question.text,
-                                    fontSize = 24.sp,
-                                    lineHeight = 32.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
+                            Surface(
+                                shape = RoundedCornerShape(18.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.14f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(20.dp)) {
+                                    Text(
+                                        text = question.text,
+                                        fontSize = 22.sp,
+                                        lineHeight = 30.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
 
-                                Spacer(modifier = Modifier.height(16.dp))
+                                    Spacer(modifier = Modifier.height(14.dp))
 
-                                FilterChip(
-                                    selected = question.isDiscussed,
-                                    onClick = { onToggleDiscussed(question.id, !question.isDiscussed) },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = if (question.isDiscussed) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-                                            contentDescription = null
-                                        )
-                                    },
-                                    label = {
-                                        Text(
-                                            if (question.isDiscussed) "Sudah Dibahas" else "Tandai Sudah Dibahas",
-                                            style = MaterialTheme.typography.labelLarge
-                                        )
-                                    }
-                                )
+                                    FilterChip(
+                                        selected = question.isDiscussed,
+                                        onClick = { onToggleDiscussed(question.id, !question.isDiscussed) },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = if (question.isDiscussed) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                                                contentDescription = null
+                                            )
+                                        },
+                                        label = {
+                                            Text(
+                                                if (question.isDiscussed) "Sudah Dibahas" else "Tandai Sudah Dibahas",
+                                                style = MaterialTheme.typography.labelLarge
+                                            )
+                                        }
+                                    )
+                                }
                             }
                         }
 
-                        LabeledTextField(
-                            value = uiState.draftAnswer,
-                            onValueChange = { onAnswerChange(question.id, it) },
-                            label = "Jawaban yang Anda catat",
-                            placeholder = "Tulis poin jawaban tenaga kesehatan di sini...",
-                            maxLength = 1000,
-                            singleLine = false,
-                            minLines = 3
-                        )
+                        SectionCard(
+                            title = "Jawaban Tenaga Kesehatan",
+                            action = {
+                                TextButton(onClick = { onSaveAnswer(question.id) }) {
+                                    Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Simpan")
+                                }
+                            }
+                        ) {
+                            LabeledTextField(
+                                value = uiState.draftAnswer,
+                                onValueChange = { onAnswerChange(question.id, it) },
+                                label = "Jawaban yang Anda catat",
+                                placeholder = "Tulis poin jawaban tenaga kesehatan di sini...",
+                                maxLength = 1000,
+                                singleLine = false,
+                                minLines = 3
+                            )
+                        }
 
-                        AttachmentSection(
-                            attachments = attachments,
-                            consultationId = consultationId,
-                            title = "Lampiran untuk Pertanyaan Ini",
-                            emptyHint = "Rekam penjelasan suara atau ambil foto jika diperlukan.",
-                            onAddPhoto = { caption, uri -> onAddPhoto(question.id, caption, uri) },
-                            onAddVoiceNote = { dur, caption, uri -> onAddVoiceNote(question.id, dur, caption, uri) },
-                            onDeleteAttachment = onDeleteAttachment
-                        )
+                        SectionCard(title = "Lampiran untuk Pertanyaan Ini") {
+                            AttachmentSection(
+                                attachments = attachments,
+                                consultationId = consultationId,
+                                compact = true,
+                                emptyHint = "Rekam penjelasan suara atau ambil foto jika diperlukan.",
+                                onAddPhoto = { caption, uri -> onAddPhoto(question.id, caption, uri) },
+                                onAddVoiceNote = { dur, caption, uri -> onAddVoiceNote(question.id, dur, caption, uri) },
+                                onDeleteAttachment = onDeleteAttachment,
+                                onUpdateCaption = onUpdateAttachmentCaption
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -268,6 +314,7 @@ fun ConsultationModeContent(
                         OutlinedButton(
                             onClick = onPrevious,
                             enabled = uiState.currentIndex > 0,
+                            shape = RoundedCornerShape(14.dp),
                             modifier = Modifier
                                 .weight(1f)
                                 .height(48.dp)
@@ -282,11 +329,15 @@ fun ConsultationModeContent(
                                 onSaveAnswer(question.id)
                                 onNext()
                             },
+                            shape = RoundedCornerShape(14.dp),
                             modifier = Modifier
                                 .weight(1f)
                                 .height(48.dp)
                         ) {
-                            Text(if (uiState.currentIndex == uiState.questions.lastIndex) "Selesai" else "Berikutnya")
+                            Text(
+                                text = if (uiState.currentIndex == uiState.questions.lastIndex) "Selesai" else "Berikutnya",
+                                fontWeight = FontWeight.Bold
+                            )
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
                         }

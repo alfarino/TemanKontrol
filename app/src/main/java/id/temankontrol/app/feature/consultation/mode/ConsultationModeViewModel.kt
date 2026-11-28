@@ -171,6 +171,12 @@ class ConsultationModeViewModel @Inject constructor(
         }
     }
 
+    fun updateAttachmentCaption(attachmentId: String, caption: String?) {
+        viewModelScope.launch {
+            attachmentRepository.updateCaption(attachmentId, caption)
+        }
+    }
+
     fun markConsultationCompleted(onDone: () -> Unit) {
         viewModelScope.launch {
             consultationRepository.setStatus(consultationId, ConsultationStatus.COMPLETED)

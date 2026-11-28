@@ -23,7 +23,10 @@ class RoomPreferencesRepository @Inject constructor(
     override val appLockSettings: Flow<AppLockSettings> = dataStore.appLockSettings
     override val lastBackupAt: Flow<Instant?> = dataStore.lastBackupAt
     override val dataChangedSinceBackup: Flow<Boolean> = dataStore.dataChangedSinceBackup
+    override val hasUnsyncedCloudChanges: Flow<Boolean> = dataStore.hasUnsyncedCloudChanges
+    override val lastDataChangeMillis: Flow<Long> = dataStore.lastDataChangeMillis
     override val accountSession: Flow<AccountSession?> = dataStore.accountSession
+    override val localDataOwnerUserId: Flow<String?> = dataStore.localDataOwnerUserId
     override val pendingTombstones: Flow<List<SyncTombstone>> = dataStore.pendingTombstones
 
     override suspend fun setNoticeAccepted(): AppResult<Unit> = dataStore.setNoticeAccepted()
@@ -41,8 +44,14 @@ class RoomPreferencesRepository @Inject constructor(
 
     override suspend fun markDataChanged(): AppResult<Unit> = dataStore.markDataChanged()
 
+    override suspend fun markCloudChangesSynced(snapshotChangeMillis: Long): AppResult<Unit> =
+        dataStore.markCloudChangesSynced(snapshotChangeMillis)
+
     override suspend fun saveAccountSession(session: AccountSession?): AppResult<Unit> =
         dataStore.saveAccountSession(session)
+
+    override suspend fun saveLocalDataOwnerUserId(userId: String?): AppResult<Unit> =
+        dataStore.saveLocalDataOwnerUserId(userId)
 
     override suspend fun updateLastSyncAt(epochMillis: Long): AppResult<Unit> =
         dataStore.updateLastSyncAt(epochMillis)
@@ -55,4 +64,10 @@ class RoomPreferencesRepository @Inject constructor(
 
     override suspend fun clearSyncTombstones(entityIds: Set<String>): AppResult<Unit> =
         dataStore.clearSyncTombstones(entityIds)
+
+    override suspend fun clearAllSyncTombstones(): AppResult<Unit> =
+        dataStore.clearAllSyncTombstones()
+
+    override suspend fun resetAccountScopedPreferences(): AppResult<Unit> =
+        dataStore.resetAccountScopedPreferences()
 }

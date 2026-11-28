@@ -143,7 +143,7 @@ fun AuthContent(
                         )
                     }
                     Text(
-                        text = "Tautkan catatan kunjungan, pertanyaan, foto & VN Anda ke server pribadi unand.tech agar data otomatis pulih saat berganti HP atau pindah ke iPhone.",
+                        text = "Tautkan catatan kunjungan, pertanyaan, foto & VN Anda ke Cloud Teman Kontrol agar data otomatis pulih saat berganti HP atau pindah ke iPhone.",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.92f)
                     )
@@ -223,7 +223,7 @@ fun AuthContent(
                 value = email,
                 onValueChange = { email = it },
                 label = { Text("Email") },
-                placeholder = { Text("contoh@unand.tech") },
+                placeholder = { Text("nama@email.com") },
                 leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 singleLine = true,
@@ -289,7 +289,7 @@ fun AuthContent(
                         onCheckedChange = { privacyAccepted = it }
                     )
                     Text(
-                        text = "Saya menyetujui Kebijakan Privasi (temankontrol.unand.tech/privacy) untuk menyimpan & menyinkronkan catatan saya secara aman.",
+                        text = "Saya menyetujui Kebijakan Privasi untuk menyimpan & menyinkronkan catatan saya secara aman melalui layanan cloud terenkripsi.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
@@ -299,7 +299,7 @@ fun AuthContent(
 
             // Optional custom server URL toggle
             TextButton(onClick = { showServerField = !showServerField }) {
-                Text(if (showServerField) "Sembunyikan Alamat Server" else "Server: temankontrol.unand.tech (Ubah?)")
+                Text(if (showServerField) "Sembunyikan Alamat Server" else "Cloud: Supabase (Ubah?)")
             }
             if (showServerField) {
                 OutlinedTextField(

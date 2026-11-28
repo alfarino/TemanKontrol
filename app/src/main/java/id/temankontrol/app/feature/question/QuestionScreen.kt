@@ -1,6 +1,7 @@
 package id.temankontrol.app.feature.question
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -72,7 +73,7 @@ fun QuestionScreen(
             uiState.attachmentsByQuestion[it.id].orEmpty()
         }.orEmpty()
 
-        QuestionFormDialog(
+        QuestionFormBottomSheet(
             consultationId = viewModel.consultationIdString,
             text = uiState.inputText,
             isPriority = uiState.inputIsPriority,
@@ -161,7 +162,7 @@ fun QuestionContent(
     AppScaffold(
         topBar = {
             AppTopBar(
-                title = "Daftar Pertanyaan",
+                title = "Kelola Pertanyaan (${uiState.questions.size})",
                 onNavigateBack = onNavigateBack
             )
         },
@@ -172,7 +173,8 @@ fun QuestionContent(
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
                 text = { Text(stringResource(R.string.action_add_question)) },
                 containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = RoundedCornerShape(16.dp)
             )
         },
         modifier = modifier
@@ -194,8 +196,8 @@ fun QuestionContent(
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         end = 16.dp,
-                        top = padding.calculateTopPadding() + 8.dp,
-                        bottom = padding.calculateBottomPadding() + 88.dp
+                        top = padding.calculateTopPadding() + 10.dp,
+                        bottom = padding.calculateBottomPadding() + 92.dp
                     ),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
@@ -211,7 +213,7 @@ fun QuestionContent(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .clip(RoundedCornerShape(12.dp))
                                     .background(bg)
                                     .padding(12.dp)
                             ) {
@@ -232,126 +234,21 @@ fun QuestionContent(
                     }
 
                     items(uiState.questions, key = { it.id }) { q ->
-                        val attachments = uiState.attachmentsByQuestion[q.id].orEmpty()
-                        val isExpanded = q.id in uiState.expandedAttachmentQuestionIds || attachments.isNotEmpty()
-                        val photoCount = attachments.count { it.kind == AttachmentKind.PHOTO }
-                        val voiceCount = attachments.count { it.kind == AttachmentKind.VOICE }
-
-                        Card(
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.Top,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Checkbox(
-                                        checked = q.isDiscussed,
-                                        onCheckedChange = { onToggleDiscussed(q, it) }
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = q.text,
-                                            style = MaterialTheme.typography.bodyLarge.copy(
-                                                textDecoration = if (q.isDiscussed) TextDecoration.LineThrough else null
-                                            ),
-                                            color = if (q.isDiscussed) {
-                                                MaterialTheme.colorScheme.onSurfaceVariant
-                                            } else {
-                                                MaterialTheme.colorScheme.onSurface
-                                            }
-                                        )
-
-                                        if (q.isPriority || photoCount > 0 || voiceCount > 0) {
-                                            Spacer(modifier = Modifier.height(6.dp))
-                                            Row(
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                if (q.isPriority) PriorityBadge()
-                                                CompactAttachmentBadges(photoCount = photoCount, voiceCount = voiceCount)
-                                            }
-                                        }
-                                    }
-                                    IconButton(onClick = { onToggleAttachmentSection(q.id) }) {
-                                        Icon(
-                                            imageVector = Icons.Default.AttachFile,
-                                            contentDescription = "Lampiran foto atau VN pertanyaan",
-                                            tint = if (attachments.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    IconButton(onClick = { onEditClick(q) }) {
-                                        Icon(
-                                            Icons.Default.Edit,
-                                            contentDescription = "Ubah",
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    IconButton(onClick = { onDeleteClick(q) }) {
-                                        Icon(
-                                            Icons.Default.Delete,
-                                            contentDescription = "Hapus",
-                                            tint = MaterialTheme.colorScheme.error
-                                        )
-                                    }
-                                }
-
-                                // Recorded answer ("Jawaban yang Anda catat")
-                                if (!q.answer.isNullOrBlank()) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(10.dp),
-                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Column(modifier = Modifier.padding(10.dp)) {
-                                            Text(
-                                                text = "Jawaban yang Anda catat",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            Text(
-                                                text = q.answer,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurface,
-                                                maxLines = 4,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                    }
-                                }
-
-                                // Per-question Photo & Voice Note attachments
-                                AnimatedVisibility(visible = isExpanded) {
-                                    Column {
-                                        Spacer(modifier = Modifier.height(10.dp))
-                                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
-                                        Spacer(modifier = Modifier.height(10.dp))
-                                        AttachmentSection(
-                                            attachments = attachments,
-                                            consultationId = consultationId,
-                                            compact = true,
-                                            emptyHint = "Lampirkan foto atau VN penjelasan untuk pertanyaan ini.",
-                                            onAddPhoto = { caption, uri -> onAddPhoto(q.id, caption, uri) },
-                                            onAddVoiceNote = { dur, caption, uri -> onAddVoiceNote(q.id, dur, caption, uri) },
-                                            onDeleteAttachment = onDeleteAttachment,
-                                            onUpdateCaption = onUpdateAttachmentCaption
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        QuestionManageCard(
+                            question = q,
+                            attachments = uiState.attachmentsByQuestion[q.id].orEmpty(),
+                            isExpanded = q.id in uiState.expandedAttachmentQuestionIds ||
+                                uiState.attachmentsByQuestion[q.id].orEmpty().isNotEmpty(),
+                            consultationId = consultationId,
+                            onToggleDiscussed = { onToggleDiscussed(q, !q.isDiscussed) },
+                            onToggleAttachmentSection = { onToggleAttachmentSection(q.id) },
+                            onEditClick = { onEditClick(q) },
+                            onDeleteClick = { onDeleteClick(q) },
+                            onAddPhoto = { caption, uri -> onAddPhoto(q.id, caption, uri) },
+                            onAddVoiceNote = { dur, caption, uri -> onAddVoiceNote(q.id, dur, caption, uri) },
+                            onDeleteAttachment = onDeleteAttachment,
+                            onUpdateAttachmentCaption = onUpdateAttachmentCaption
+                        )
                     }
                 }
             }
@@ -360,7 +257,225 @@ fun QuestionContent(
 }
 
 @Composable
-private fun QuestionFormDialog(
+private fun QuestionManageCard(
+    question: Question,
+    attachments: List<Attachment>,
+    isExpanded: Boolean,
+    consultationId: String,
+    onToggleDiscussed: () -> Unit,
+    onToggleAttachmentSection: () -> Unit,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+    onAddPhoto: (String?, String?) -> Unit,
+    onAddVoiceNote: (Long, String?, String?) -> Unit,
+    onDeleteAttachment: (Attachment) -> Unit,
+    onUpdateAttachmentCaption: (String, String?) -> Unit
+) {
+    var showCardMenu by remember { mutableStateOf(false) }
+    val photoCount = attachments.count { it.kind == AttachmentKind.PHOTO }
+    val voiceCount = attachments.count { it.kind == AttachmentKind.VOICE }
+
+    ElevatedCard(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.14f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Header Row: Badges + More Menu (full space for question text below!)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        if (question.isPriority) {
+                            PriorityBadge()
+                        }
+                        FilterChip(
+                            selected = question.isDiscussed,
+                            onClick = onToggleDiscussed,
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = if (question.isDiscussed) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            },
+                            label = {
+                                Text(
+                                    text = if (question.isDiscussed) "Sudah dibahas" else "Belum dibahas",
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        )
+                    }
+
+                    Box {
+                        IconButton(
+                            onClick = { showCardMenu = true },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "Opsi pertanyaan"
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showCardMenu,
+                            onDismissRequest = { showCardMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Ubah Pertanyaan / Jawaban") },
+                                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                                onClick = {
+                                    showCardMenu = false
+                                    onEditClick()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Hapus Pertanyaan", color = MaterialTheme.colorScheme.error) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                },
+                                onClick = {
+                                    showCardMenu = false
+                                    onDeleteClick()
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // Full-width Question Text
+                Text(
+                    text = question.text,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        textDecoration = if (question.isDiscussed) TextDecoration.LineThrough else null
+                    ),
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (question.isDiscussed) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    }
+                )
+
+                // Recorded answer ("Jawaban yang Anda catat")
+                if (!question.answer.isNullOrBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text(
+                                text = "Jawaban yang Anda catat",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = question.answer,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 4,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+
+                // Footer action strip
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedButton(
+                        onClick = onEditClick,
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(15.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (question.answer.isNullOrBlank()) "Ubah / Jawaban" else "Ubah",
+                            style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = onToggleAttachmentSection,
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.AttachFile,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (photoCount + voiceCount > 0) {
+                                "Lampiran (${photoCount + voiceCount})"
+                            } else {
+                                "+ Foto / VN"
+                            },
+                            style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1
+                        )
+                    }
+                }
+
+                // Per-question Photo & Voice Note attachments
+                AnimatedVisibility(visible = isExpanded) {
+                    Column {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.14f))
+                        Spacer(modifier = Modifier.height(10.dp))
+                        AttachmentSection(
+                            attachments = attachments,
+                            consultationId = consultationId,
+                            compact = true,
+                            emptyHint = "Lampirkan foto atau VN penjelasan untuk pertanyaan ini.",
+                            onAddPhoto = onAddPhoto,
+                            onAddVoiceNote = onAddVoiceNote,
+                            onDeleteAttachment = onDeleteAttachment,
+                            onUpdateCaption = onUpdateAttachmentCaption
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun QuestionFormBottomSheet(
     consultationId: String,
     text: String,
     isPriority: Boolean,
@@ -384,150 +499,186 @@ private fun QuestionFormDialog(
 ) {
     val starterPrefixes = remember { listOf("Apa", "Mengapa", "Bagaimana", "Jelaskan", "Apa saja") }
 
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = {
-            Text(if (isEditing) "Ubah Pertanyaan" else "Tambah Pertanyaan")
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text(
-                    text = "Mulai dengan pertanyaan terbuka:",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .imePadding()
+                .padding(horizontal = 18.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = if (isEditing) "Ubah Pertanyaan" else "Tambah Pertanyaan Baru",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
 
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+            Text(
+                text = "Mulai dengan kata tanya terbuka:",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(starterPrefixes) { prefix ->
+                    SuggestionChip(
+                        onClick = { onApplyStarter(prefix) },
+                        label = { Text("$prefix…") }
+                    )
+                }
+            }
+
+            LabeledTextField(
+                value = text,
+                onValueChange = onTextChange,
+                label = "Teks Pertanyaan",
+                placeholder = "Tulis pertanyaan terbuka Anda...",
+                maxLength = 250,
+                singleLine = false,
+                minLines = 2,
+                errorMessage = errorMessage
+            )
+
+            // Soft non-blocking hint if question looks like yes/no
+            if (showClosedHint) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    items(starterPrefixes) { prefix ->
-                        SuggestionChip(
-                            onClick = { onApplyStarter(prefix) },
-                            label = { Text("$prefix…") }
-                        )
-                    }
-                }
-
-                LabeledTextField(
-                    value = text,
-                    onValueChange = onTextChange,
-                    label = "Teks Pertanyaan",
-                    placeholder = "Tulis pertanyaan terbuka Anda...",
-                    maxLength = 250,
-                    singleLine = false,
-                    minLines = 2,
-                    errorMessage = errorMessage
-                )
-
-                // Soft non-blocking hint if question looks like yes/no
-                if (showClosedHint) {
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp)) {
-                            Row(verticalAlignment = Alignment.Top) {
-                                Icon(
-                                    imageVector = Icons.Default.Lightbulb,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = stringResource(R.string.hint_closed_question),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onTertiaryContainer
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Row(
-                                horizontalArrangement = Arrangement.End,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                TextButton(onClick = onDismissClosedHint) {
-                                    Text("Tetap Gunakan")
-                                }
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.Top) {
+                            Icon(
+                                imageVector = Icons.Default.Lightbulb,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.hint_closed_question),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.End,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            TextButton(onClick = onDismissClosedHint) {
+                                Text("Tetap Gunakan")
                             }
                         }
                     }
                 }
+            }
 
-                OutlinedButton(
-                    onClick = onOpenSuggestions,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Pilih dari Saran Pertanyaan Terbuka")
-                }
+            OutlinedButton(
+                onClick = onOpenSuggestions,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Pilih dari 20 Saran Pertanyaan Terbuka")
+            }
 
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
-                    Switch(
-                        checked = isPriority,
-                        onCheckedChange = onPriorityChange
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Tandai sebagai Prioritas",
                             style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "Pertanyaan prioritas tampil paling atas (tanpa batas jumlah)",
+                            text = "Tampil paling atas (tanpa batas jumlah)",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                }
-
-                LabeledTextField(
-                    value = answer,
-                    onValueChange = onAnswerChange,
-                    label = "Jawaban yang Anda catat (Opsional)",
-                    placeholder = "Catat penjelasan dari tenaga kesehatan...",
-                    maxLength = 1000,
-                    singleLine = false,
-                    minLines = 2
-                )
-
-                if (isEditing) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                    AttachmentSection(
-                        attachments = editingAttachments,
-                        consultationId = consultationId,
-                        title = "Lampiran Pertanyaan (Foto & VN)",
-                        emptyHint = "Belum ada lampiran foto atau VN pada pertanyaan ini.",
-                        onAddPhoto = onAddPhoto,
-                        onAddVoiceNote = onAddVoiceNote,
-                        onDeleteAttachment = onDeleteAttachment,
-                        onUpdateCaption = onUpdateAttachmentCaption
+                    Switch(
+                        checked = isPriority,
+                        onCheckedChange = onPriorityChange
                     )
                 }
             }
-        },
-        confirmButton = {
-            Button(onClick = onSave) {
-                Text(stringResource(R.string.action_save))
+
+            LabeledTextField(
+                value = answer,
+                onValueChange = onAnswerChange,
+                label = "Jawaban yang Anda catat (Opsional)",
+                placeholder = "Catat penjelasan dari tenaga kesehatan...",
+                maxLength = 1000,
+                singleLine = false,
+                minLines = 2
+            )
+
+            if (isEditing) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.16f))
+                AttachmentSection(
+                    attachments = editingAttachments,
+                    consultationId = consultationId,
+                    title = "Lampiran Pertanyaan (Foto & VN)",
+                    emptyHint = "Belum ada lampiran foto atau VN pada pertanyaan ini.",
+                    onAddPhoto = onAddPhoto,
+                    onAddVoiceNote = onAddVoiceNote,
+                    onDeleteAttachment = onDeleteAttachment,
+                    onUpdateCaption = onUpdateAttachmentCaption
+                )
+            } else {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Tip: Setelah pertanyaan disimpan, ketuk tombol \"+ Foto / VN\" di kartu pertanyaan untuk menambahkan lampiran.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(10.dp)
+                    )
+                }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp, bottom = 24.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f).height(48.dp)
+                ) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+                Button(
+                    onClick = onSave,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1.4f).height(48.dp)
+                ) {
+                    Text(stringResource(R.string.action_save), fontWeight = FontWeight.Bold)
+                }
             }
         }
-    )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -591,19 +742,18 @@ private fun SuggestionCatalogSheet(
                     .verticalScroll(rememberScrollState())
             ) {
                 suggestions.forEach { sug ->
-                    Card(
-                        shape = RoundedCornerShape(8.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                        ),
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                         modifier = Modifier
                             .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
                             .clickable { onSelectSuggestion(sug.text) }
                     ) {
                         Text(
                             text = sug.text,
                             style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(12.dp)
+                            modifier = Modifier.padding(14.dp)
                         )
                     }
                 }

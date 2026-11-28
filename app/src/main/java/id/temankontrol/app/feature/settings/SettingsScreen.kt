@@ -158,9 +158,9 @@ fun SettingsContent(
                             )
                             Text(
                                 text = if (session != null) {
-                                    "${session.email} • Tersambung ke unand.tech"
+                                    "${session.email} • Tersambung ke Cloud"
                                 } else {
-                                    "Ketuk untuk Masuk / Daftar akun pemulihan cloud (temankontrol.unand.tech)"
+                                    "Ketuk untuk Masuk / Daftar akun pemulihan cloud"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.White.copy(alpha = 0.9f)

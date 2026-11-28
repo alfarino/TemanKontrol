@@ -1,15 +1,19 @@
 package id.temankontrol.app.feature.summary
 
 import android.content.Intent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -139,36 +143,81 @@ fun SummaryPreviewContent(
                 FilterChip(
                     selected = uiState.includeProvider,
                     onClick = { onToggleProvider(!uiState.includeProvider) },
+                    leadingIcon = if (uiState.includeProvider) {
+                        { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                    } else null,
                     label = { Text("Tenaga Kesehatan") }
                 )
                 FilterChip(
                     selected = uiState.includeQuestions,
                     onClick = { onToggleQuestions(!uiState.includeQuestions) },
+                    leadingIcon = if (uiState.includeQuestions) {
+                        { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                    } else null,
                     label = { Text("Pertanyaan & Jawaban") }
                 )
                 FilterChip(
                     selected = uiState.includeNotes,
                     onClick = { onToggleNotes(!uiState.includeNotes) },
+                    leadingIcon = if (uiState.includeNotes) {
+                        { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                    } else null,
                     label = { Text("Hasil Konsultasi") }
                 )
                 FilterChip(
                     selected = uiState.includeFollowUps,
                     onClick = { onToggleFollowUps(!uiState.includeFollowUps) },
+                    leadingIcon = if (uiState.includeFollowUps) {
+                        { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                    } else null,
                     label = { Text("Tindak Lanjut") }
                 )
             }
 
-            // Document preview card (A4 look)
-            ElevatedCard(
+            Surface(
                 shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(10.dp)
                 ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Ringkasan PDF/teks berisi seluruh catatan tertulis; foto & rekaman suara (VN) tetap tersimpan privat di perangkat/akun Anda.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+
+            // Document preview card (A4 look)
+            ElevatedCard(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.14f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp)
+                    ) {
                     Text(
                         text = consultation.title,
                         style = MaterialTheme.typography.titleLarge,
@@ -263,6 +312,7 @@ fun SummaryPreviewContent(
                         fontStyle = FontStyle.Italic,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
                 }
             }
 

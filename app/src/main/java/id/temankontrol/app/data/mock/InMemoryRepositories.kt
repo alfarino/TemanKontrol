@@ -648,7 +648,10 @@ class InMemoryPreferencesRepository @Inject constructor(
     private val _appLockSettings = kotlinx.coroutines.flow.MutableStateFlow(AppLockSettings())
     private val _lastBackupAt = kotlinx.coroutines.flow.MutableStateFlow<Instant?>(null)
     private val _dataChanged = kotlinx.coroutines.flow.MutableStateFlow(true)
+    private val _hasUnsyncedCloudChanges = kotlinx.coroutines.flow.MutableStateFlow(false)
+    private val _lastDataChangeMillis = kotlinx.coroutines.flow.MutableStateFlow(0L)
     private val _accountSession = kotlinx.coroutines.flow.MutableStateFlow<AccountSession?>(null)
+    private val _localDataOwnerUserId = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     private val _tombstones = kotlinx.coroutines.flow.MutableStateFlow<List<SyncTombstone>>(emptyList())
 
     override val noticeAccepted: Flow<Boolean> = dataStore.noticeAccepted
@@ -656,7 +659,10 @@ class InMemoryPreferencesRepository @Inject constructor(
     override val appLockSettings: Flow<AppLockSettings> = _appLockSettings
     override val lastBackupAt: Flow<Instant?> = _lastBackupAt
     override val dataChangedSinceBackup: Flow<Boolean> = _dataChanged
+    override val hasUnsyncedCloudChanges: Flow<Boolean> = _hasUnsyncedCloudChanges
+    override val lastDataChangeMillis: Flow<Long> = _lastDataChangeMillis
     override val accountSession: Flow<AccountSession?> = _accountSession
+    override val localDataOwnerUserId: Flow<String?> = _localDataOwnerUserId
     override val pendingTombstones: Flow<List<SyncTombstone>> = _tombstones
 
     override suspend fun setNoticeAccepted(): AppResult<Unit> {
@@ -686,11 +692,25 @@ class InMemoryPreferencesRepository @Inject constructor(
 
     override suspend fun markDataChanged(): AppResult<Unit> {
         _dataChanged.value = true
+        _hasUnsyncedCloudChanges.value = true
+        _lastDataChangeMillis.value = System.currentTimeMillis()
+        return AppResult.Success(Unit)
+    }
+
+    override suspend fun markCloudChangesSynced(snapshotChangeMillis: Long): AppResult<Unit> {
+        if (_lastDataChangeMillis.value <= snapshotChangeMillis) {
+            _hasUnsyncedCloudChanges.value = false
+        }
         return AppResult.Success(Unit)
     }
 
     override suspend fun saveAccountSession(session: AccountSession?): AppResult<Unit> {
         _accountSession.value = session
+        return AppResult.Success(Unit)
+    }
+
+    override suspend fun saveLocalDataOwnerUserId(userId: String?): AppResult<Unit> {
+        _localDataOwnerUserId.value = userId
         return AppResult.Success(Unit)
     }
 
@@ -711,6 +731,23 @@ class InMemoryPreferencesRepository @Inject constructor(
 
     override suspend fun clearSyncTombstones(entityIds: Set<String>): AppResult<Unit> {
         _tombstones.value = _tombstones.value.filterNot { it.entityId in entityIds }
+        return AppResult.Success(Unit)
+    }
+
+    override suspend fun clearAllSyncTombstones(): AppResult<Unit> {
+        _tombstones.value = emptyList()
+        return AppResult.Success(Unit)
+    }
+
+    override suspend fun resetAccountScopedPreferences(): AppResult<Unit> {
+        _accountSession.value = null
+        _localDataOwnerUserId.value = null
+        _tombstones.value = emptyList()
+        _lastBackupAt.value = null
+        _dataChanged.value = true
+        _hasUnsyncedCloudChanges.value = false
+        _lastDataChangeMillis.value = 0L
+        _reminderSettings.value = ReminderSettings()
         return AppResult.Success(Unit)
     }
 }

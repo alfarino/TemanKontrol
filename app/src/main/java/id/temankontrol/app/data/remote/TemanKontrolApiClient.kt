@@ -10,8 +10,14 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.Closeable
+import java.time.Instant
 
 class CloudApiException(
     val statusCode: Int,
@@ -19,13 +25,82 @@ class CloudApiException(
     override val message: String
 ) : Exception(message)
 
+@Serializable
+private data class SupabaseUserMetadata(
+    @SerialName("display_name") val displayName: String? = null
+)
+
+@Serializable
+private data class SupabaseSignUpBody(
+    val email: String,
+    val password: String,
+    val data: SupabaseUserMetadata
+)
+
+@Serializable
+private data class SupabaseLoginBody(
+    val email: String,
+    val password: String
+)
+
+@Serializable
+private data class SupabaseRefreshBody(
+    @SerialName("refresh_token") val refreshToken: String
+)
+
+@Serializable
+private data class SupabaseRecoverBody(
+    val email: String
+)
+
+@Serializable
+private data class SupabaseVerifyRecoveryBody(
+    val type: String,
+    val email: String,
+    val token: String
+)
+
+@Serializable
+private data class SupabaseUpdatePasswordBody(
+    val password: String
+)
+
+@Serializable
+private data class SupabasePushRpcBody(
+    val payload: SyncPushRequest
+)
+
+@Serializable
+private data class SupabasePullRpcBody(
+    @SerialName("since_millis") val sinceMillis: Long
+)
+
+@Serializable
+private data class SupabaseUserBody(
+    val id: String,
+    val email: String? = null,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("user_metadata") val userMetadata: SupabaseUserMetadata? = null
+)
+
+@Serializable
+private data class SupabaseAuthBody(
+    @SerialName("access_token") val accessToken: String? = null,
+    @SerialName("refresh_token") val refreshToken: String? = null,
+    @SerialName("expires_in") val expiresIn: Long = 3600L,
+    val user: SupabaseUserBody? = null
+)
+
 class TemanKontrolApiClient(
     engine: HttpClientEngine = OkHttp.create(),
-    private val defaultBaseUrl: String = DEFAULT_BASE_URL
+    private val defaultBaseUrl: String = DEFAULT_BASE_URL,
+    private val defaultApiKey: String = DEFAULT_ANON_KEY
 ) : Closeable {
 
     companion object {
-        const val DEFAULT_BASE_URL = "https://temankontrol.unand.tech"
+        const val DEFAULT_BASE_URL = "https://hqtrpbagnosmrznjiiph.supabase.co"
+        const val DEFAULT_ANON_KEY = "sb_publishable_seW-ToTABtcx7-lWasypgA_nZ13ij3p"
+        private const val LEGACY_PRIVATE_HOST = "unand.tech"
     }
 
     private val json = Json {
@@ -39,68 +114,143 @@ class TemanKontrolApiClient(
         }
     }
 
-    private fun url(baseUrl: String, path: String): String {
-        val trimmed = baseUrl.trimEnd('/')
-        return "$trimmed$path"
+    private fun resolveBaseUrl(baseUrl: String): String {
+        val trimmed = baseUrl.trim().trimEnd('/')
+        if (trimmed.isBlank() || trimmed.contains(LEGACY_PRIVATE_HOST, ignoreCase = true)) {
+            return defaultBaseUrl.trimEnd('/')
+        }
+        return trimmed
     }
 
+    private fun url(baseUrl: String, path: String): String = "${resolveBaseUrl(baseUrl)}$path"
+
     suspend fun health(baseUrl: String = defaultBaseUrl): HealthResponse {
-        val response = client.get(url(baseUrl, "/health"))
+        val response = client.get(url(baseUrl, "/auth/v1/health")) {
+            header("apikey", defaultApiKey)
+        }
         ensureSuccess(response)
-        return response.body()
+        return HealthResponse(
+            status = "UP",
+            service = "supabase-temankontrol",
+            database = "postgres",
+            journalMode = "rls",
+            serverTimeMillis = System.currentTimeMillis()
+        )
     }
 
     suspend fun register(request: RegisterRequest, baseUrl: String = defaultBaseUrl): AuthResponse {
-        val response = client.post(url(baseUrl, "/v1/auth/register")) {
+        val email = request.email.trim().lowercase()
+        val displayName = request.displayName.trim()
+        if (!email.contains("@") || !email.contains(".")) {
+            throw CloudApiException(400, "INVALID_EMAIL", "Format email tidak valid.")
+        }
+        if (request.password.length < 8) {
+            throw CloudApiException(400, "WEAK_PASSWORD", "Kata sandi minimal 8 karakter.")
+        }
+        if (displayName.isBlank()) {
+            throw CloudApiException(400, "INVALID_NAME", "Nama tampilan wajib diisi.")
+        }
+        if (!request.privacyPolicyAccepted) {
+            throw CloudApiException(400, "PRIVACY_REQUIRED", "Persetujuan Kebijakan Privasi wajib dicentang.")
+        }
+
+        val response = client.post(url(baseUrl, "/auth/v1/signup")) {
+            header("apikey", defaultApiKey)
             contentType(ContentType.Application.Json)
-            setBody(request)
+            setBody(
+                SupabaseSignUpBody(
+                    email = email,
+                    password = request.password,
+                    data = SupabaseUserMetadata(displayName = displayName)
+                )
+            )
         }
         ensureSuccess(response)
-        return response.body()
+        val body: SupabaseAuthBody = response.body()
+        if (body.accessToken.isNullOrBlank() || body.refreshToken.isNullOrBlank() || body.user == null) {
+            throw CloudApiException(
+                statusCode = 400,
+                errorCode = "EMAIL_CONFIRMATION_REQUIRED",
+                message = "Akun dibuat! Silakan cek kotak masuk email Anda untuk konfirmasi lalu masuk."
+            )
+        }
+        return body.toAuthResponse(fallbackDisplayName = displayName)
     }
 
     suspend fun login(request: LoginRequest, baseUrl: String = defaultBaseUrl): AuthResponse {
-        val response = client.post(url(baseUrl, "/v1/auth/login")) {
+        val email = request.email.trim().lowercase()
+        val response = client.post(url(baseUrl, "/auth/v1/token?grant_type=password")) {
+            header("apikey", defaultApiKey)
             contentType(ContentType.Application.Json)
-            setBody(request)
+            setBody(SupabaseLoginBody(email = email, password = request.password))
         }
         ensureSuccess(response)
-        return response.body()
+        val body: SupabaseAuthBody = response.body()
+        return body.toAuthResponse()
     }
 
     suspend fun refresh(refreshToken: String, baseUrl: String = defaultBaseUrl): AuthResponse {
-        val response = client.post(url(baseUrl, "/v1/auth/refresh")) {
+        val response = client.post(url(baseUrl, "/auth/v1/token?grant_type=refresh_token")) {
+            header("apikey", defaultApiKey)
             contentType(ContentType.Application.Json)
-            setBody(RefreshRequest(refreshToken))
+            setBody(SupabaseRefreshBody(refreshToken))
         }
         ensureSuccess(response)
-        return response.body()
+        val body: SupabaseAuthBody = response.body()
+        return body.toAuthResponse()
     }
 
-    suspend fun logout(refreshToken: String, baseUrl: String = defaultBaseUrl) {
+    suspend fun logout(accessToken: String, baseUrl: String = defaultBaseUrl) {
         runCatching {
-            client.post(url(baseUrl, "/v1/auth/logout")) {
-                contentType(ContentType.Application.Json)
-                setBody(LogoutRequest(refreshToken))
+            client.post(url(baseUrl, "/auth/v1/logout")) {
+                header("apikey", defaultApiKey)
+                header(HttpHeaders.Authorization, "Bearer $accessToken")
             }
         }
     }
 
     suspend fun forgotPassword(email: String, baseUrl: String = defaultBaseUrl): OtpDispatchResponse {
-        val response = client.post(url(baseUrl, "/v1/auth/forgot-password")) {
+        val response = client.post(url(baseUrl, "/auth/v1/recover")) {
+            header("apikey", defaultApiKey)
             contentType(ContentType.Application.Json)
-            setBody(ForgotPasswordRequest(email))
+            setBody(SupabaseRecoverBody(email.trim().lowercase()))
         }
         ensureSuccess(response)
-        return response.body()
+        return OtpDispatchResponse(
+            sent = true,
+            expiresInMinutes = 15,
+            message = "Jika email terdaftar, kode OTP pemulihan telah dikirim ke email Anda."
+        )
     }
 
     suspend fun resetPassword(request: ResetPasswordRequest, baseUrl: String = defaultBaseUrl) {
-        val response = client.post(url(baseUrl, "/v1/auth/reset-password")) {
-            contentType(ContentType.Application.Json)
-            setBody(request)
+        if (request.newPassword.length < 8) {
+            throw CloudApiException(400, "WEAK_PASSWORD", "Kata sandi baru minimal 8 karakter.")
         }
-        ensureSuccess(response)
+        val verifyRes = client.post(url(baseUrl, "/auth/v1/verify")) {
+            header("apikey", defaultApiKey)
+            contentType(ContentType.Application.Json)
+            setBody(
+                SupabaseVerifyRecoveryBody(
+                    type = "recovery",
+                    email = request.email.trim().lowercase(),
+                    token = request.otpCode.trim()
+                )
+            )
+        }
+        ensureSuccess(verifyRes)
+        val recoveryAuth: SupabaseAuthBody = verifyRes.body()
+        val recoveryToken = recoveryAuth.accessToken
+            ?: throw CloudApiException(400, "INVALID_OTP", "Kode OTP salah atau sudah kedaluwarsa.")
+
+        val updateRes = client.put(url(baseUrl, "/auth/v1/user")) {
+            header("apikey", defaultApiKey)
+            header(HttpHeaders.Authorization, "Bearer $recoveryToken")
+            contentType(ContentType.Application.Json)
+            setBody(SupabaseUpdatePasswordBody(request.newPassword))
+        }
+        ensureSuccess(updateRes)
+        logout(recoveryToken, baseUrl)
     }
 
     suspend fun deleteAccount(
@@ -108,7 +258,8 @@ class TemanKontrolApiClient(
         password: String,
         baseUrl: String = defaultBaseUrl
     ) {
-        val response = client.delete(url(baseUrl, "/v1/account")) {
+        val response = client.post(url(baseUrl, "/functions/v1/delete-account")) {
+            header("apikey", defaultApiKey)
             header(HttpHeaders.Authorization, "Bearer $accessToken")
             contentType(ContentType.Application.Json)
             setBody(DeleteAccountRequest(password))
@@ -121,10 +272,11 @@ class TemanKontrolApiClient(
         request: SyncPushRequest,
         baseUrl: String = defaultBaseUrl
     ): SyncPushResponse {
-        val response = client.post(url(baseUrl, "/v1/sync/push")) {
+        val response = client.post(url(baseUrl, "/rest/v1/rpc/sync_push")) {
+            header("apikey", defaultApiKey)
             header(HttpHeaders.Authorization, "Bearer $accessToken")
             contentType(ContentType.Application.Json)
-            setBody(request)
+            setBody(SupabasePushRpcBody(request))
         }
         ensureSuccess(response)
         return response.body()
@@ -135,8 +287,11 @@ class TemanKontrolApiClient(
         sinceMillis: Long,
         baseUrl: String = defaultBaseUrl
     ): SyncPullResponse {
-        val response = client.get(url(baseUrl, "/v1/sync/pull?since=$sinceMillis")) {
+        val response = client.post(url(baseUrl, "/rest/v1/rpc/sync_pull")) {
+            header("apikey", defaultApiKey)
             header(HttpHeaders.Authorization, "Bearer $accessToken")
+            contentType(ContentType.Application.Json)
+            setBody(SupabasePullRpcBody(sinceMillis))
         }
         ensureSuccess(response)
         return response.body()
@@ -144,12 +299,17 @@ class TemanKontrolApiClient(
 
     suspend fun uploadAttachmentFile(
         accessToken: String,
+        userId: String,
         attachmentId: String,
         bytes: ByteArray,
+        mimeType: String = "application/octet-stream",
         baseUrl: String = defaultBaseUrl
     ) {
-        val response = client.put(url(baseUrl, "/v1/attachments/$attachmentId/file")) {
+        val response = client.post(url(baseUrl, "/storage/v1/object/attachments/$userId/$attachmentId")) {
+            header("apikey", defaultApiKey)
             header(HttpHeaders.Authorization, "Bearer $accessToken")
+            header("x-upsert", "true")
+            contentType(runCatching { ContentType.parse(mimeType) }.getOrDefault(ContentType.Application.OctetStream))
             setBody(bytes)
         }
         ensureSuccess(response)
@@ -157,26 +317,89 @@ class TemanKontrolApiClient(
 
     suspend fun downloadAttachmentFile(
         accessToken: String,
+        userId: String,
         attachmentId: String,
         baseUrl: String = defaultBaseUrl
     ): ByteArray? {
-        val response = client.get(url(baseUrl, "/v1/attachments/$attachmentId/file")) {
+        val response = client.get(url(baseUrl, "/storage/v1/object/attachments/$userId/$attachmentId")) {
+            header("apikey", defaultApiKey)
             header(HttpHeaders.Authorization, "Bearer $accessToken")
         }
         if (response.status == HttpStatusCode.NotFound) return null
+        if (response.status == HttpStatusCode.BadRequest) {
+            val errBody = runCatching { response.bodyAsText() }.getOrDefault("")
+            if (errBody.contains("not_found", ignoreCase = true) ||
+                errBody.contains("Object not found", ignoreCase = true)
+            ) {
+                return null
+            }
+        }
         ensureSuccess(response)
         return response.readRawBytes()
+    }
+
+    private fun SupabaseAuthBody.toAuthResponse(fallbackDisplayName: String = "Pengguna"): AuthResponse {
+        val u = user ?: throw CloudApiException(500, "INVALID_AUTH_RESPONSE", "Respons akun dari server tidak lengkap.")
+        val token = accessToken ?: throw CloudApiException(401, "NO_ACCESS_TOKEN", "Sesi akses tidak ditemukan.")
+        val refresh = refreshToken ?: throw CloudApiException(401, "NO_REFRESH_TOKEN", "Token pembaruan tidak ditemukan.")
+        val createdMillis = u.createdAt?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
+            ?: System.currentTimeMillis()
+        val display = u.userMetadata?.displayName?.takeIf { it.isNotBlank() }
+            ?: u.email?.substringBefore("@")
+            ?: fallbackDisplayName
+        return AuthResponse(
+            accessToken = token,
+            refreshToken = refresh,
+            expiresInSeconds = expiresIn,
+            user = UserProfileDto(
+                userId = u.id,
+                email = u.email.orEmpty(),
+                displayName = display,
+                createdAtMillis = createdMillis
+            )
+        )
     }
 
     private suspend fun ensureSuccess(response: HttpResponse) {
         if (response.status.isSuccess()) return
         val rawBody = runCatching { response.bodyAsText() }.getOrDefault("")
-        val parsed = runCatching { json.decodeFromString<ApiErrorDto>(rawBody) }.getOrNull()
+        val parsedObj = runCatching { json.decodeFromString<JsonObject>(rawBody) }.getOrNull()
+        val code = parsedObj?.get("error_code")?.jsonPrimitive?.contentOrNull
+            ?: parsedObj?.get("code")?.jsonPrimitive?.contentOrNull
+            ?: parsedObj?.get("error")?.jsonPrimitive?.contentOrNull
+            ?: "HTTP_${response.status.value}"
+        val rawMsg = parsedObj?.get("msg")?.jsonPrimitive?.contentOrNull
+            ?: parsedObj?.get("message")?.jsonPrimitive?.contentOrNull
+            ?: parsedObj?.get("error_description")?.jsonPrimitive?.contentOrNull
+            ?: "Gagal terhubung ke server (${response.status.value})."
+
         throw CloudApiException(
             statusCode = response.status.value,
-            errorCode = parsed?.code ?: "HTTP_${response.status.value}",
-            message = parsed?.message ?: "Gagal terhubung ke server (${response.status.value})."
+            errorCode = code,
+            message = mapErrorMessage(code, rawMsg, response.status.value)
         )
+    }
+
+    private fun mapErrorMessage(code: String, rawMsg: String, statusCode: Int): String {
+        val lowerCode = code.lowercase()
+        val lowerMsg = rawMsg.lowercase()
+        return when {
+            lowerCode == "invalid_credentials" || lowerMsg.contains("invalid login credentials") ->
+                "Email atau kata sandi salah."
+            lowerCode == "user_already_exists" || lowerMsg.contains("already registered") ->
+                "Email sudah terdaftar."
+            lowerCode == "email_not_confirmed" || lowerMsg.contains("email not confirmed") ->
+                "Email belum diverifikasi. Silakan cek kotak masuk email Anda."
+            lowerCode == "otp_expired" || lowerMsg.contains("token has expired") || lowerMsg.contains("invalid token") ->
+                "Kode OTP salah atau sudah kedaluwarsa."
+            lowerCode == "weak_password" || lowerMsg.contains("password should be at least") ->
+                "Kata sandi terlalu lemah (minimal 8 karakter)."
+            lowerCode == "over_email_send_rate_limit" || statusCode == 429 ->
+                "Terlalu banyak permintaan. Tunggu sebentar lalu coba lagi."
+            lowerCode == "invalid_password" ->
+                "Kata sandi konfirmasi salah."
+            else -> rawMsg
+        }
     }
 
     override fun close() {

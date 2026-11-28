@@ -14,8 +14,13 @@ import id.temankontrol.app.domain.model.SyncSummaryResult
 import id.temankontrol.app.domain.repository.PreferencesRepository
 import id.temankontrol.app.domain.validation.Validation
 import id.temankontrol.shared.dto.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -283,9 +288,10 @@ class RoomLocalSyncStorage @Inject constructor(
     }
 
     override suspend fun wipeAllLocalUserData() {
-        database.consultationDao().deleteAll()
-        database.reminderLogDao().deleteOlderThan(Long.MAX_VALUE)
-        mediaManager.attachmentsRootDir().deleteRecursively()
+        withContext(Dispatchers.IO) {
+            database.clearAllTables()
+            mediaManager.attachmentsRootDir().deleteRecursively()
+        }
     }
 
     private fun resolveAttachmentFile(consultationId: String, fileName: String): File {
@@ -300,6 +306,8 @@ class OfflineFirstSyncEngine @Inject constructor(
     private val storage: LocalSyncStorage,
     private val preferencesRepository: PreferencesRepository
 ) {
+    private val syncMutex = Mutex()
+    private val sessionUploadedAttachmentIds = ConcurrentHashMap.newKeySet<String>()
 
     suspend fun register(
         email: String,
@@ -307,15 +315,17 @@ class OfflineFirstSyncEngine @Inject constructor(
         displayName: String,
         privacyAccepted: Boolean,
         serverBaseUrl: String = TemanKontrolApiClient.DEFAULT_BASE_URL
-    ): AppResult<SyncSummaryResult> {
-        return try {
+    ): AppResult<SyncSummaryResult> = syncMutex.withLock {
+        try {
             val auth = apiClient.register(
                 RegisterRequest(email, password, displayName, privacyAccepted),
                 baseUrl = serverBaseUrl
             )
             val session = auth.toAccountSession(serverBaseUrl)
+            prepareLocalStateForAccount(session.userId)
             preferencesRepository.saveAccountSession(session)
-            // Merge guest local data & sync immediately
+            sessionUploadedAttachmentIds.clear()
+            // Merge guest local data (only if previously unowned) & sync immediately
             syncNowInternal(session, forceFullPull = true)
         } catch (e: CloudApiException) {
             AppResult.Failure(AppError.Validation("auth", e.message))
@@ -328,15 +338,17 @@ class OfflineFirstSyncEngine @Inject constructor(
         email: String,
         password: String,
         serverBaseUrl: String = TemanKontrolApiClient.DEFAULT_BASE_URL
-    ): AppResult<SyncSummaryResult> {
-        return try {
+    ): AppResult<SyncSummaryResult> = syncMutex.withLock {
+        try {
             val auth = apiClient.login(
                 LoginRequest(email, password, deviceName = "TemanKontrol Mobile"),
                 baseUrl = serverBaseUrl
             )
             val session = auth.toAccountSession(serverBaseUrl)
+            prepareLocalStateForAccount(session.userId)
             preferencesRepository.saveAccountSession(session)
-            // Merge existing guest records and pull full cloud archive (since=0)
+            sessionUploadedAttachmentIds.clear()
+            // Pull full cloud archive (since=0) & merge unowned guest data if any
             syncNowInternal(session, forceFullPull = true)
         } catch (e: CloudApiException) {
             AppResult.Failure(AppError.Validation("auth", e.message))
@@ -345,39 +357,77 @@ class OfflineFirstSyncEngine @Inject constructor(
         }
     }
 
-    suspend fun syncNow(forceFullRestore: Boolean = false): AppResult<SyncSummaryResult> {
+    suspend fun syncNow(forceFullRestore: Boolean = false): AppResult<SyncSummaryResult> = syncMutex.withLock {
         val session = preferencesRepository.accountSession.first()
-            ?: return AppResult.Failure(AppError.Validation("auth", "Belum masuk ke akun."))
-        return try {
-            syncNowInternal(session, forceFullPull = forceFullRestore)
+            ?: return@withLock AppResult.Failure(AppError.Validation("auth", "Belum masuk ke akun."))
+        if (forceFullRestore) {
+            sessionUploadedAttachmentIds.clear()
+        }
+        return@withLock try {
+            syncNowWithAutoRefresh(session, forceFullRestore)
         } catch (e: CloudApiException) {
-            if (e.statusCode == 401) {
-                return tryRefreshAndRetry(session, forceFullRestore)
-            }
             AppResult.Failure(AppError.Validation("sync", e.message))
         } catch (e: Exception) {
             AppResult.Failure(AppError.Validation("sync", "Tidak dapat terhubung ke server. Perubahan Anda tetap aman tersimpan lokal."))
         }
     }
 
-    suspend fun logout(): AppResult<Unit> {
-        val session = preferencesRepository.accountSession.first()
-        if (session != null) {
-            apiClient.logout(session.refreshToken, session.serverBaseUrl)
-        }
-        preferencesRepository.saveAccountSession(null)
-        return AppResult.Success(Unit)
+    /**
+     * Dipakai oleh auto-sync foreground / background: hanya menyinkronkan jika sedang login
+     * DAN ada perubahan lokal tertunda atau jarak sinkron terakhir melewati [maxStaleMillis].
+     */
+    suspend fun syncIfPendingOrStale(maxStaleMillis: Long = 5 * 60_000L): AppResult<SyncSummaryResult>? {
+        val session = preferencesRepository.accountSession.first() ?: return null
+        val hasPending = preferencesRepository.hasUnsyncedCloudChanges.first()
+        val lastSync = session.lastSyncAtMillis ?: 0L
+        val isStale = (System.currentTimeMillis() - lastSync) >= maxStaleMillis
+        if (!hasPending && !isStale) return null
+        return syncNow(forceFullRestore = false)
     }
 
-    suspend fun deleteAccountPermanently(password: String): AppResult<Unit> {
+    suspend fun logout(forceWithoutBackup: Boolean = false): AppResult<Unit> = syncMutex.withLock {
         val session = preferencesRepository.accountSession.first()
-            ?: return AppResult.Failure(AppError.Validation("auth", "Belum masuk ke akun."))
-        return try {
+        if (session != null && !forceWithoutBackup) {
+            val backupResult = try {
+                syncNowWithAutoRefresh(session, forceFullPull = false)
+            } catch (e: CloudApiException) {
+                AppResult.Failure(
+                    AppError.Validation(
+                        "logout_backup",
+                        "Gagal mencadangkan data akun ke cloud sebelum keluar (${e.message}). Data lokal Anda tetap aman."
+                    )
+                )
+            } catch (e: Exception) {
+                AppResult.Failure(
+                    AppError.Validation(
+                        "logout_backup",
+                        "Tidak dapat terhubung ke cloud untuk mencadangkan data sebelum keluar. Periksa internet Anda agar tidak ada data yang hilang."
+                    )
+                )
+            }
+            if (backupResult is AppResult.Failure) {
+                return@withLock backupResult
+            }
+        }
+        if (session != null) {
+            apiClient.logout(session.accessToken, session.serverBaseUrl)
+        }
+        sessionUploadedAttachmentIds.clear()
+        storage.wipeAllLocalUserData()
+        preferencesRepository.resetAccountScopedPreferences()
+        return@withLock AppResult.Success(Unit)
+    }
+
+    suspend fun deleteAccountPermanently(password: String): AppResult<Unit> = syncMutex.withLock {
+        val session = preferencesRepository.accountSession.first()
+            ?: return@withLock AppResult.Failure(AppError.Validation("auth", "Belum masuk ke akun."))
+        return@withLock try {
             withAutoRefresh(session) { active ->
                 apiClient.deleteAccount(active.accessToken, password, active.serverBaseUrl)
             }
+            sessionUploadedAttachmentIds.clear()
             storage.wipeAllLocalUserData()
-            preferencesRepository.saveAccountSession(null)
+            preferencesRepository.resetAccountScopedPreferences()
             AppResult.Success(Unit)
         } catch (e: CloudApiException) {
             AppResult.Failure(AppError.Validation("delete", e.message))
@@ -386,20 +436,29 @@ class OfflineFirstSyncEngine @Inject constructor(
         }
     }
 
-    private suspend fun tryRefreshAndRetry(
+    private suspend fun prepareLocalStateForAccount(userId: String) {
+        val prevOwner = preferencesRepository.localDataOwnerUserId.first()
+        if (prevOwner != null && prevOwner != userId) {
+            // Isolate device storage so another account's records never leak into the new account
+            storage.wipeAllLocalUserData()
+            preferencesRepository.resetAccountScopedPreferences()
+        }
+        preferencesRepository.saveLocalDataOwnerUserId(userId)
+    }
+
+    private suspend fun syncNowWithAutoRefresh(
         session: AccountSession,
         forceFullPull: Boolean
     ): AppResult<SyncSummaryResult> {
         return try {
+            syncNowInternal(session, forceFullPull = forceFullPull)
+        } catch (e: CloudApiException) {
+            if (e.statusCode != 401) throw e
             val refreshedAuth = apiClient.refresh(session.refreshToken, session.serverBaseUrl)
             val newSession = refreshedAuth.toAccountSession(session.serverBaseUrl)
                 .copy(lastSyncAtMillis = session.lastSyncAtMillis)
             preferencesRepository.saveAccountSession(newSession)
             syncNowInternal(newSession, forceFullPull)
-        } catch (e: CloudApiException) {
-            AppResult.Failure(AppError.Validation("auth", e.message))
-        } catch (e: Exception) {
-            AppResult.Failure(AppError.Validation("sync", "Sesi tidak dapat diperbarui saat offline."))
         }
     }
 
@@ -423,6 +482,7 @@ class OfflineFirstSyncEngine @Inject constructor(
         session: AccountSession,
         forceFullPull: Boolean
     ): AppResult<SyncSummaryResult> {
+        val snapshotChangeMillis = preferencesRepository.lastDataChangeMillis.first()
         val local = storage.readSnapshot()
         val tombstones = preferencesRepository.pendingTombstones.first()
         val settings = preferencesRepository.reminderSettings.first()
@@ -517,12 +577,21 @@ class OfflineFirstSyncEngine @Inject constructor(
             preferencesRepository.clearSyncTombstones(tombstones.map { it.entityId }.toSet())
         }
 
-        // Upload local binary attachment files that exist on device
+        // Upload local binary attachment files that have not been uploaded in this session yet
         var uploadedFiles = 0
         local.attachments.forEach { att ->
+            if (!forceFullPull && sessionUploadedAttachmentIds.contains(att.id)) return@forEach
             val bytes = storage.readAttachmentBytes(att.consultationId, att.fileName, null)
             if (bytes != null && bytes.isNotEmpty()) {
-                apiClient.uploadAttachmentFile(session.accessToken, att.id, bytes, session.serverBaseUrl)
+                apiClient.uploadAttachmentFile(
+                    accessToken = session.accessToken,
+                    userId = session.userId,
+                    attachmentId = att.id,
+                    bytes = bytes,
+                    mimeType = att.mimeType,
+                    baseUrl = session.serverBaseUrl
+                )
+                sessionUploadedAttachmentIds.add(att.id)
                 uploadedFiles++
             }
         }
@@ -563,9 +632,10 @@ class OfflineFirstSyncEngine @Inject constructor(
                 val localBytes = storage.readAttachmentBytes(remoteAtt.consultationId, remoteAtt.fileName, null)
                 if (localBytes == null) {
                     val bytes = apiClient.downloadAttachmentFile(
-                        session.accessToken,
-                        remoteAtt.id,
-                        session.serverBaseUrl
+                        accessToken = session.accessToken,
+                        userId = session.userId,
+                        attachmentId = remoteAtt.id,
+                        baseUrl = session.serverBaseUrl
                     )
                     if (bytes != null) {
                         storage.writeDownloadedAttachment(remoteAtt, bytes)
@@ -575,7 +645,11 @@ class OfflineFirstSyncEngine @Inject constructor(
             }
 
         val syncTs = maxOf(pushRes.serverTimestampMillis, pulled.serverTimestampMillis)
+        if (preferencesRepository.localDataOwnerUserId.first() == null) {
+            preferencesRepository.saveLocalDataOwnerUserId(session.userId)
+        }
         preferencesRepository.updateLastSyncAt(syncTs)
+        preferencesRepository.markCloudChangesSynced(snapshotChangeMillis)
 
         return AppResult.Success(
             SyncSummaryResult(

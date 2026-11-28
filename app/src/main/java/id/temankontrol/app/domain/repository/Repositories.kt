@@ -78,7 +78,10 @@ interface PreferencesRepository {
     val appLockSettings: Flow<AppLockSettings>
     val lastBackupAt: Flow<java.time.Instant?>
     val dataChangedSinceBackup: Flow<Boolean>
+    val hasUnsyncedCloudChanges: Flow<Boolean>
+    val lastDataChangeMillis: Flow<Long>
     val accountSession: Flow<AccountSession?>
+    val localDataOwnerUserId: Flow<String?>
     val pendingTombstones: Flow<List<SyncTombstone>>
 
     suspend fun setNoticeAccepted(): AppResult<Unit>
@@ -86,10 +89,14 @@ interface PreferencesRepository {
     suspend fun updateAppLockSettings(transform: (AppLockSettings) -> AppLockSettings): AppResult<Unit>
     suspend fun recordBackupCreated(at: java.time.Instant): AppResult<Unit>
     suspend fun markDataChanged(): AppResult<Unit>
+    suspend fun markCloudChangesSynced(snapshotChangeMillis: Long): AppResult<Unit>
     suspend fun saveAccountSession(session: AccountSession?): AppResult<Unit>
+    suspend fun saveLocalDataOwnerUserId(userId: String?): AppResult<Unit>
     suspend fun updateLastSyncAt(epochMillis: Long): AppResult<Unit>
     suspend fun recordSyncTombstone(entityType: SyncEntityType, entityId: String, deletedAtMillis: Long): AppResult<Unit>
     suspend fun clearSyncTombstones(entityIds: Set<String>): AppResult<Unit>
+    suspend fun clearAllSyncTombstones(): AppResult<Unit>
+    suspend fun resetAccountScopedPreferences(): AppResult<Unit>
 }
 
 interface SuggestionCatalog {

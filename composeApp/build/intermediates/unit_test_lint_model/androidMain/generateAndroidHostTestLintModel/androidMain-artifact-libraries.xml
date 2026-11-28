@@ -1,9 +1,9 @@
 <libraries>
   <library
       name=":@@:composeApp"
-      jars="C:\Users\User\.gradle\caches\9.6.0\transforms\0eda65a8f07b692faa8cd03571783c96\transformed\out\jars\classes.jar"
+      jars="C:\Users\User\.gradle\caches\9.6.0\transforms\0281a3bcb67eafc858967c0c56afb9eb\transformed\out\jars\classes.jar"
       resolved="artifacts:composeApp:unspecified"
-      folder="C:\Users\User\.gradle\caches\9.6.0\transforms\0eda65a8f07b692faa8cd03571783c96\transformed\out"
+      folder="C:\Users\User\.gradle\caches\9.6.0\transforms\0281a3bcb67eafc858967c0c56afb9eb\transformed\out"
       manifest="AndroidManifest.xml"
       resFolder="res"
       assetsFolder="assets"

@@ -36,6 +36,7 @@ class ReminderSettingsViewModel @Inject constructor(
     fun setVisitReminderEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.updateReminderSettings { it.copy(visitReminderEnabled = enabled) }
+            preferencesRepository.markDataChanged()
             reminderScheduler.rescheduleAll()
         }
     }
@@ -43,6 +44,7 @@ class ReminderSettingsViewModel @Inject constructor(
     fun setVisitReminderHour(hour: Int) {
         viewModelScope.launch {
             preferencesRepository.updateReminderSettings { it.copy(visitReminderHour = hour.coerceIn(6, 21)) }
+            preferencesRepository.markDataChanged()
             reminderScheduler.rescheduleAll()
         }
     }
@@ -50,6 +52,7 @@ class ReminderSettingsViewModel @Inject constructor(
     fun setVisitThirtyMinBeforeEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.updateReminderSettings { it.copy(visitThirtyMinBeforeEnabled = enabled) }
+            preferencesRepository.markDataChanged()
             reminderScheduler.rescheduleAll()
         }
     }
@@ -57,6 +60,7 @@ class ReminderSettingsViewModel @Inject constructor(
     fun setVisitAtTimeEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.updateReminderSettings { it.copy(visitAtTimeEnabled = enabled) }
+            preferencesRepository.markDataChanged()
             reminderScheduler.rescheduleAll()
         }
     }
@@ -64,6 +68,7 @@ class ReminderSettingsViewModel @Inject constructor(
     fun setCustomLeadMinutes(minutes: Int?) {
         viewModelScope.launch {
             preferencesRepository.updateReminderSettings { it.copy(customLeadMinutes = minutes) }
+            preferencesRepository.markDataChanged()
             reminderScheduler.rescheduleAll()
         }
     }
@@ -71,6 +76,7 @@ class ReminderSettingsViewModel @Inject constructor(
     fun setAlarmSoundModeEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.updateReminderSettings { it.copy(alarmSoundModeEnabled = enabled) }
+            preferencesRepository.markDataChanged()
             reminderScheduler.rescheduleAll()
         }
     }
@@ -84,6 +90,7 @@ class ReminderSettingsViewModel @Inject constructor(
     fun setPrepareReminderEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.updateReminderSettings { it.copy(prepareReminderEnabled = enabled) }
+            preferencesRepository.markDataChanged()
             reminderScheduler.rescheduleAll()
         }
     }
@@ -91,6 +98,7 @@ class ReminderSettingsViewModel @Inject constructor(
     fun setFollowUpReminderEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.updateReminderSettings { it.copy(followUpReminderEnabled = enabled) }
+            preferencesRepository.markDataChanged()
             reminderScheduler.rescheduleAll()
         }
     }
@@ -98,6 +106,7 @@ class ReminderSettingsViewModel @Inject constructor(
     fun setFollowUpReminderHour(hour: Int) {
         viewModelScope.launch {
             preferencesRepository.updateReminderSettings { it.copy(followUpReminderHour = hour.coerceIn(6, 21)) }
+            preferencesRepository.markDataChanged()
             reminderScheduler.rescheduleAll()
         }
     }
@@ -105,6 +114,7 @@ class ReminderSettingsViewModel @Inject constructor(
     fun setBackupReminderEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.updateReminderSettings { it.copy(backupReminderEnabled = enabled) }
+            preferencesRepository.markDataChanged()
             reminderScheduler.rescheduleAll()
         }
     }
@@ -112,6 +122,7 @@ class ReminderSettingsViewModel @Inject constructor(
     fun setShowTitleOnLockScreen(show: Boolean) {
         viewModelScope.launch {
             preferencesRepository.updateReminderSettings { it.copy(showTitleOnLockScreen = show) }
+            preferencesRepository.markDataChanged()
         }
     }
 

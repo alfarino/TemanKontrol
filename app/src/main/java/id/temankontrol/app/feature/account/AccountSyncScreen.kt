@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,6 +41,7 @@ fun AccountSyncScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     if (showDeleteDialog) {
         DeleteAccountPasswordDialog(
@@ -53,6 +55,29 @@ fun AccountSyncScreen(
         )
     }
 
+    if (showLogoutDialog) {
+        ConfirmLogoutDialog(
+            onConfirmBackupAndLogout = {
+                showLogoutDialog = false
+                viewModel.logout(forceWithoutBackup = false)
+            },
+            onDismiss = { showLogoutDialog = false }
+        )
+    }
+
+    if (uiState.logoutBackupFailed) {
+        LogoutBackupFailedDialog(
+            errorMessage = uiState.errorMessage ?: "Gagal mencadangkan data ke cloud.",
+            onRetryBackup = { viewModel.logout(forceWithoutBackup = false) },
+            onForceLogout = { viewModel.logout(forceWithoutBackup = true) },
+            onOpenLocalBackup = {
+                viewModel.clearFeedback()
+                onNavigateToBackup()
+            },
+            onDismiss = { viewModel.clearFeedback() }
+        )
+    }
+
     AccountSyncContent(
         uiState = uiState,
         onNavigateBack = onNavigateBack,
@@ -60,7 +85,7 @@ fun AccountSyncScreen(
         onNavigateToBackup = onNavigateToBackup,
         onSyncNow = { viewModel.syncNow(forceFullRestore = false) },
         onFullRestore = { viewModel.syncNow(forceFullRestore = true) },
-        onLogout = { viewModel.logout(onNavigateBack) },
+        onLogout = { showLogoutDialog = true },
         onRequestDeleteAccount = { showDeleteDialog = true }
     )
 }
@@ -100,6 +125,20 @@ fun AccountSyncContent(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (session == null) {
+                if (uiState.statusMessage != null) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = uiState.statusMessage,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                }
                 Card(
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -118,7 +157,7 @@ fun AccountSyncContent(
                             color = Color.White
                         )
                         Text(
-                            text = "Masuk atau daftar akun unand.tech untuk mencadangkan otomatis seluruh catatan, pertanyaan, foto, dan rekaman suara Anda agar pulih saat ganti HP atau pindah ke iPhone.",
+                            text = "Masuk atau daftar akun cloud untuk mencadangkan otomatis seluruh catatan, pertanyaan, foto, dan rekaman suara Anda agar pulih saat ganti HP atau pindah ke iPhone.",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White.copy(alpha = 0.92f)
                         )
@@ -175,7 +214,7 @@ fun AccountSyncContent(
                                     color = Color.White.copy(alpha = 0.9f)
                                 )
                                 Text(
-                                    text = "Server: ${session.serverBaseUrl}",
+                                    text = "Cloud Sync: Supabase",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color.White.copy(alpha = 0.78f)
                                 )
@@ -248,6 +287,12 @@ fun AccountSyncContent(
                 }
 
                 SectionCard(title = "Sinkronisasi & Pemulihan Cloud") {
+                    Text(
+                        text = "Sinkronisasi otomatis aktif: setiap perubahan data dicadangkan otomatis ke Supabase (~3 detik saat online), saat aplikasi dibuka, dan berkala di latar belakang ketika internet tersedia.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
                     Button(
                         enabled = !uiState.isBusy,
                         onClick = onSyncNow,
@@ -280,9 +325,9 @@ fun AccountSyncContent(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Default.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Keluar dari Akun (Data Lokal Tetap Disimpan)")
+                        Text("Cadangkan & Keluar / Ganti Akun")
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -329,7 +374,7 @@ private fun DeleteAccountPasswordDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = "Tindakan ini akan menghapus permanen akun Anda, seluruh jadwal, pertanyaan, catatan, dan file Foto/VN di server Ubuntu maupun di perangkat ini. Tindakan tidak dapat dibatalkan.",
+                    text = "Tindakan ini akan menghapus permanen akun Anda, seluruh jadwal, pertanyaan, catatan, dan file Foto/VN di server cloud maupun di perangkat ini. Tindakan tidak dapat dibatalkan.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 OutlinedTextField(
@@ -356,6 +401,84 @@ private fun DeleteAccountPasswordDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("Batal")
+            }
+        }
+    )
+}
+
+@Composable
+private fun ConfirmLogoutDialog(
+    onConfirmBackupAndLogout: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Cadangkan & Keluar Akun?") },
+        text = {
+            Text(
+                text = "Agar data antar-akun tidak bercampur, aplikasi akan mencadangkan semua catatan, pertanyaan, dan lampiran akun ini ke cloud terlebih dahulu, lalu mengosongkan data lokal di HP ini.",
+                style = MaterialTheme.typography.bodySmall
+            )
+        },
+        confirmButton = {
+            Button(onClick = onConfirmBackupAndLogout) {
+                Text("Cadangkan & Keluar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal")
+            }
+        }
+    )
+}
+
+@Composable
+private fun LogoutBackupFailedDialog(
+    errorMessage: String,
+    onRetryBackup: () -> Unit,
+    onForceLogout: () -> Unit,
+    onOpenLocalBackup: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Pencadangan Cloud Gagal") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = errorMessage,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "Jika keluar sekarang tanpa mencadangkan, perubahan terbaru sejak sinkronisasi terakhir akan terhapus dari perangkat ini.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+                TextButton(
+                    onClick = onOpenLocalBackup,
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text("Buat Cadangan Berkas Lokal (.tkbackup) dulu")
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onRetryBackup) {
+                Text("Coba Cadangkan Lagi")
+            }
+        },
+        dismissButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                TextButton(
+                    onClick = onForceLogout,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Tetap Keluar & Hapus")
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Batal")
+                }
             }
         }
     )

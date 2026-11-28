@@ -149,6 +149,62 @@ class ConsultationDetailViewModel @Inject constructor(
         }
     }
 
+    fun addPhotoAttachment(
+        questionId: String?,
+        target: AttachmentTarget,
+        caption: String?,
+        uriString: String?
+    ) {
+        viewModelScope.launch {
+            val fileObj = uriString?.let { android.net.Uri.parse(it).path }?.let { java.io.File(it) }
+            val fileName = fileObj?.name ?: "foto_${java.util.UUID.randomUUID().toString().take(6)}.jpg"
+            val sizeBytes = fileObj?.takeIf { it.exists() }?.length() ?: 320_000L
+            attachmentRepository.addAttachment(
+                consultationId = consultationId,
+                questionId = questionId,
+                target = target,
+                kind = AttachmentKind.PHOTO,
+                fileName = fileName,
+                mimeType = "image/jpeg",
+                sizeBytes = sizeBytes,
+                caption = caption,
+                uriString = uriString
+            )
+        }
+    }
+
+    fun addVoiceAttachment(
+        questionId: String?,
+        target: AttachmentTarget,
+        durationMs: Long,
+        caption: String?,
+        uriString: String?
+    ) {
+        viewModelScope.launch {
+            val fileObj = uriString?.let { android.net.Uri.parse(it).path }?.let { java.io.File(it) }
+            val fileName = fileObj?.name ?: "vn_${java.util.UUID.randomUUID().toString().take(6)}.m4a"
+            val sizeBytes = fileObj?.takeIf { it.exists() }?.length() ?: (durationMs / 1000L).coerceAtLeast(1L) * 4_000L
+            attachmentRepository.addAttachment(
+                consultationId = consultationId,
+                questionId = questionId,
+                target = target,
+                kind = AttachmentKind.VOICE,
+                fileName = fileName,
+                mimeType = "audio/mp4",
+                sizeBytes = sizeBytes,
+                durationMs = durationMs,
+                caption = caption,
+                uriString = uriString
+            )
+        }
+    }
+
+    fun updateAttachmentCaption(attachmentId: String, caption: String?) {
+        viewModelScope.launch {
+            attachmentRepository.updateCaption(attachmentId, caption)
+        }
+    }
+
     fun deleteConsultation(onDeleted: () -> Unit) {
         viewModelScope.launch {
             consultationRepository.delete(consultationId)

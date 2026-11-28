@@ -3,22 +3,45 @@ package id.temankontrol.composeapp.platform
 import id.temankontrol.shared.dto.SyncConsultationDto
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.darwin.Darwin
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
+import platform.CoreGraphics.CGPointMake
+import platform.CoreGraphics.CGRectMake
+import platform.Foundation.NSCalendar
+import platform.Foundation.NSCalendarUnitDay
+import platform.Foundation.NSCalendarUnitHour
+import platform.Foundation.NSCalendarUnitMinute
+import platform.Foundation.NSCalendarUnitMonth
+import platform.Foundation.NSCalendarUnitSecond
+import platform.Foundation.NSCalendarUnitYear
 import platform.Foundation.NSData
 import platform.Foundation.NSDate
+import platform.Foundation.NSDocumentDirectory
+import platform.Foundation.NSFileManager
 import platform.Foundation.NSMutableData
 import platform.Foundation.NSString
+import platform.Foundation.NSTimeZone
+import platform.Foundation.NSURL
+import platform.Foundation.NSUTF8StringEncoding
+import platform.Foundation.NSUUID
+import platform.Foundation.NSUserDomainMask
+import platform.Foundation.appendBytes
+import platform.Foundation.dataWithContentsOfURL
 import platform.Foundation.dateWithTimeIntervalSince1970
 import platform.Foundation.drawAtPoint
+import platform.Foundation.localTimeZone
+import platform.Foundation.secondsFromGMTForDate
+import platform.Foundation.stringWithContentsOfURL
+import platform.Foundation.timeIntervalSince1970
+import platform.Foundation.writeToURL
 import platform.LocalAuthentication.LAContext
 import platform.LocalAuthentication.LAPolicyDeviceOwnerAuthentication
 import platform.UIKit.UIFont
 import platform.UIKit.UIGraphicsPDFRenderer
 import platform.UIKit.UIGraphicsPDFRendererFormat
-import platform.CoreGraphics.CGPointMake
-import platform.CoreGraphics.CGRectMake
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionSound
 import platform.UserNotifications.UNCalendarNotificationTrigger
@@ -34,15 +57,38 @@ import platform.UserNotifications.UNUserNotificationCenter
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 import platform.posix.memcpy
-import platform.Foundation.NSCalendar
-import platform.Foundation.NSCalendarUnitDay
-import platform.Foundation.NSCalendarUnitHour
-import platform.Foundation.NSCalendarUnitMinute
-import platform.Foundation.NSCalendarUnitMonth
-import platform.Foundation.NSCalendarUnitSecond
-import platform.Foundation.NSCalendarUnitYear
+
+/**
+ * Bridge yang diisi oleh kode Swift (NativeBridge.swift) saat aplikasi iOS berjalan,
+ * menggunakan Base64 String agar interop Swift <-> Kotlin/Native aman tanpa konversi KotlinByteArray.
+ */
+interface IosNativeMediaAndShareBridge {
+    fun pickPhoto(callback: (String?, String?, String?) -> Unit)
+    fun capturePhoto(callback: (String?, String?, String?) -> Unit)
+    fun startVoiceRecording(onError: (String) -> Unit): Boolean
+    fun stopVoiceRecording(callback: (String?, Long, String?, String?) -> Unit)
+    fun playVoice(base64Audio: String, fileName: String, onCompleted: () -> Unit)
+    fun stopVoice()
+    fun shareText(title: String, text: String)
+    fun sharePdf(fileName: String, base64Pdf: String)
+    fun exportBackupJson(fileName: String, jsonText: String, onDone: (Boolean, String) -> Unit)
+    fun importBackupJson(onLoaded: (String?) -> Unit)
+}
+
+object IosNativeBridgeHolder {
+    var bridge: IosNativeMediaAndShareBridge? = null
+}
 
 actual fun platformName(): String = "iPhone (iOS)"
+
+actual fun currentTimeMillis(): Long = (NSDate().timeIntervalSince1970 * 1000.0).toLong()
+
+actual fun localOffsetSeconds(epochMillis: Long): Int {
+    val date = NSDate.dateWithTimeIntervalSince1970(epochMillis / 1000.0)
+    return NSTimeZone.localTimeZone.secondsFromGMTForDate(date).toInt()
+}
+
+actual fun generateUuid(): String = NSUUID().UUIDString.lowercase()
 
 actual fun createHttpClientEngine(): HttpClientEngine = Darwin.create()
 
@@ -56,6 +102,172 @@ actual fun createPlatformMediaAdapter(): PlatformMediaAdapter = object : Platfor
 actual fun createPlatformBiometricAuth(): PlatformBiometricAuth = IosBiometricAuth()
 
 actual fun createPlatformPdfExporter(): PlatformPdfExporter = IosPdfExporter()
+
+actual fun createPlatformLocalStore(): PlatformLocalStore = IosFileLocalStore()
+
+@OptIn(ExperimentalEncodingApi::class)
+actual fun createPlatformMediaActions(): PlatformMediaActions = object : PlatformMediaActions {
+    override fun pickPhoto(onResult: (PickedMediaFile?) -> Unit) {
+        val bridge = IosNativeBridgeHolder.bridge ?: return onResult(null)
+        bridge.pickPhoto { b64, fileName, mimeType ->
+            dispatch_async(dispatch_get_main_queue()) {
+                val bytes = b64?.let { runCatching { Base64.decode(it) }.getOrNull() }
+                if (bytes != null && fileName != null && mimeType != null) {
+                    onResult(PickedMediaFile(bytes, fileName, mimeType))
+                } else {
+                    onResult(null)
+                }
+            }
+        }
+    }
+
+    override fun capturePhoto(onResult: (PickedMediaFile?) -> Unit) {
+        val bridge = IosNativeBridgeHolder.bridge ?: return onResult(null)
+        bridge.capturePhoto { b64, fileName, mimeType ->
+            dispatch_async(dispatch_get_main_queue()) {
+                val bytes = b64?.let { runCatching { Base64.decode(it) }.getOrNull() }
+                if (bytes != null && fileName != null && mimeType != null) {
+                    onResult(PickedMediaFile(bytes, fileName, mimeType))
+                } else {
+                    onResult(null)
+                }
+            }
+        }
+    }
+
+    override fun startVoiceRecording(onError: (String) -> Unit): Boolean {
+        val bridge = IosNativeBridgeHolder.bridge ?: run {
+            onError("Perekam suara belum terhubung di perangkat iOS.")
+            return false
+        }
+        return bridge.startVoiceRecording(onError)
+    }
+
+    override fun stopVoiceRecording(onResult: (PickedMediaFile?) -> Unit) {
+        val bridge = IosNativeBridgeHolder.bridge ?: return onResult(null)
+        bridge.stopVoiceRecording { b64, durationMs, fileName, mimeType ->
+            dispatch_async(dispatch_get_main_queue()) {
+                val bytes = b64?.let { runCatching { Base64.decode(it) }.getOrNull() }
+                if (bytes != null && fileName != null && mimeType != null) {
+                    onResult(PickedMediaFile(bytes, fileName, mimeType, durationMs))
+                } else {
+                    onResult(null)
+                }
+            }
+        }
+    }
+
+    override fun playVoice(bytes: ByteArray, fileName: String, onCompleted: () -> Unit) {
+        val bridge = IosNativeBridgeHolder.bridge ?: return onCompleted()
+        bridge.playVoice(Base64.encode(bytes), fileName) {
+            dispatch_async(dispatch_get_main_queue()) {
+                onCompleted()
+            }
+        }
+    }
+
+    override fun stopVoice() {
+        IosNativeBridgeHolder.bridge?.stopVoice()
+    }
+}
+
+@OptIn(ExperimentalEncodingApi::class)
+actual fun createPlatformShareBridge(): PlatformShareBridge = object : PlatformShareBridge {
+    override fun shareText(title: String, text: String) {
+        IosNativeBridgeHolder.bridge?.shareText(title, text)
+    }
+
+    override fun sharePdfBytes(fileName: String, pdfBytes: ByteArray) {
+        IosNativeBridgeHolder.bridge?.sharePdf(fileName, Base64.encode(pdfBytes))
+    }
+
+    override fun exportBackupJson(fileName: String, jsonText: String, onDone: (Boolean, String) -> Unit) {
+        val bridge = IosNativeBridgeHolder.bridge ?: return onDone(false, "Bridge tidak tersedia")
+        bridge.exportBackupJson(fileName, jsonText) { ok, msg ->
+            dispatch_async(dispatch_get_main_queue()) {
+                onDone(ok, msg)
+            }
+        }
+    }
+
+    override fun importBackupJson(onLoaded: (String?) -> Unit) {
+        val bridge = IosNativeBridgeHolder.bridge ?: return onLoaded(null)
+        bridge.importBackupJson { content ->
+            dispatch_async(dispatch_get_main_queue()) {
+                onLoaded(content)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalForeignApi::class)
+class IosFileLocalStore : PlatformLocalStore {
+    private fun documentsUrl(): NSURL? =
+        NSFileManager.defaultManager.URLsForDirectory(NSDocumentDirectory, NSUserDomainMask).firstOrNull() as? NSURL
+
+    private fun storeFileUrl(): NSURL? = documentsUrl()?.URLByAppendingPathComponent("temankontrol_store.json")
+
+    private fun attachmentsRootUrl(): NSURL? = documentsUrl()?.URLByAppendingPathComponent("attachments")
+
+    private fun consultationDirUrl(consultationId: String): NSURL? =
+        attachmentsRootUrl()?.URLByAppendingPathComponent(consultationId)
+
+    override fun loadStateJson(): String? {
+        val url = storeFileUrl() ?: return null
+        return NSString.stringWithContentsOfURL(url, encoding = NSUTF8StringEncoding, error = null)
+    }
+
+    override fun saveStateJson(json: String) {
+        val url = storeFileUrl() ?: return
+        (json as NSString).writeToURL(url, atomically = true, encoding = NSUTF8StringEncoding, error = null)
+    }
+
+    override fun writeAttachmentBytes(consultationId: String, fileName: String, bytes: ByteArray): String {
+        val dirUrl = consultationDirUrl(consultationId) ?: return ""
+        NSFileManager.defaultManager.createDirectoryAtURL(
+            url = dirUrl,
+            withIntermediateDirectories = true,
+            attributes = null,
+            error = null
+        )
+        val fileUrl = dirUrl.URLByAppendingPathComponent(fileName) ?: return ""
+        val data = NSMutableData()
+        if (bytes.isNotEmpty()) {
+            bytes.usePinned { pinned ->
+                data.appendBytes(pinned.addressOf(0), length = bytes.size.toULong())
+            }
+        }
+        data.writeToURL(fileUrl, atomically = true)
+        return fileUrl.absoluteString ?: ""
+    }
+
+    override fun readAttachmentBytes(consultationId: String, fileName: String): ByteArray? {
+        val fileUrl = consultationDirUrl(consultationId)?.URLByAppendingPathComponent(fileName) ?: return null
+        val nsData = NSData.dataWithContentsOfURL(fileUrl) ?: return null
+        val size = nsData.length.toInt()
+        if (size <= 0) return ByteArray(0)
+        val out = ByteArray(size)
+        out.usePinned { pinned ->
+            memcpy(pinned.addressOf(0), nsData.bytes, nsData.length)
+        }
+        return out
+    }
+
+    override fun deleteAttachmentFile(consultationId: String, fileName: String) {
+        val fileUrl = consultationDirUrl(consultationId)?.URLByAppendingPathComponent(fileName) ?: return
+        NSFileManager.defaultManager.removeItemAtURL(fileUrl, error = null)
+    }
+
+    override fun deleteConsultationFiles(consultationId: String) {
+        val dirUrl = consultationDirUrl(consultationId) ?: return
+        NSFileManager.defaultManager.removeItemAtURL(dirUrl, error = null)
+    }
+
+    override fun wipeAllAttachments() {
+        val root = attachmentsRootUrl() ?: return
+        NSFileManager.defaultManager.removeItemAtURL(root, error = null)
+    }
+}
 
 class IosAlarmScheduler : PlatformAlarmScheduler {
 
@@ -194,23 +406,48 @@ class IosPdfExporter : PlatformPdfExporter {
                     platform.UIKit.NSFontAttributeName to UIFont.boldSystemFontOfSize(18.0)
                 )
             )
-            var y = 72.0
-            questionLines.forEach { line ->
-                (line as NSString).drawAtPoint(
-                    CGPointMake(36.0, y),
-                    withAttributes = mapOf<Any?, Any?>(
-                        platform.UIKit.NSFontAttributeName to UIFont.systemFontOfSize(12.0)
-                    )
+            var y = 68.0
+            val subtitle = "Keluhan: ${consultation.reason}"
+            (subtitle as NSString).drawAtPoint(
+                CGPointMake(36.0, y),
+                withAttributes = mapOf<Any?, Any?>(
+                    platform.UIKit.NSFontAttributeName to UIFont.systemFontOfSize(12.0)
                 )
-                y += 20.0
+            )
+            y += 24.0
+            questionLines.forEach { line ->
+                line.chunked(78).forEach { part ->
+                    if (y > 790.0) {
+                        context?.beginPage()
+                        y = 36.0
+                    }
+                    (part as NSString).drawAtPoint(
+                        CGPointMake(36.0, y),
+                        withAttributes = mapOf<Any?, Any?>(
+                            platform.UIKit.NSFontAttributeName to UIFont.systemFontOfSize(11.5)
+                        )
+                    )
+                    y += 17.0
+                }
+                y += 4.0
             }
             if (!noteSummary.isNullOrBlank()) {
-                (noteSummary as NSString).drawAtPoint(
-                    CGPointMake(36.0, y + 12.0),
-                    withAttributes = mapOf<Any?, Any?>(
-                        platform.UIKit.NSFontAttributeName to UIFont.systemFontOfSize(12.0)
-                    )
-                )
+                y += 8.0
+                noteSummary.lines().forEach { line ->
+                    line.chunked(78).forEach { part ->
+                        if (y > 790.0) {
+                            context?.beginPage()
+                            y = 36.0
+                        }
+                        (part as NSString).drawAtPoint(
+                            CGPointMake(36.0, y),
+                            withAttributes = mapOf<Any?, Any?>(
+                                platform.UIKit.NSFontAttributeName to UIFont.systemFontOfSize(11.5)
+                            )
+                        )
+                        y += 17.0
+                    }
+                }
             }
         }
         val bytes = ByteArray(pdfData.length.toInt())

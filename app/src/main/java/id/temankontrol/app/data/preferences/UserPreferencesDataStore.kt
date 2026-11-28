@@ -53,7 +53,10 @@ class UserPreferencesDataStore @Inject constructor(
         val SECURE_SCREEN = booleanPreferencesKey("secure_screen")
         val LAST_BACKUP_AT = longPreferencesKey("last_backup_at")
         val DATA_CHANGED_SINCE_BACKUP = booleanPreferencesKey("data_changed_since_backup")
+        val HAS_UNSYNCED_CLOUD_CHANGES = booleanPreferencesKey("has_unsynced_cloud_changes")
+        val LAST_DATA_CHANGE_MILLIS = longPreferencesKey("last_data_change_millis")
         val ACCOUNT_SESSION_JSON = stringPreferencesKey("account_session_json")
+        val LOCAL_DATA_OWNER_USER_ID = stringPreferencesKey("local_data_owner_user_id")
         val SYNC_TOMBSTONES_JSON = stringPreferencesKey("sync_tombstones_json")
     }
 
@@ -99,10 +102,22 @@ class UserPreferencesDataStore @Inject constructor(
         prefs[Keys.DATA_CHANGED_SINCE_BACKUP] ?: true
     }
 
+    val hasUnsyncedCloudChanges: Flow<Boolean> = safeData.map { prefs ->
+        prefs[Keys.HAS_UNSYNCED_CLOUD_CHANGES] ?: false
+    }
+
+    val lastDataChangeMillis: Flow<Long> = safeData.map { prefs ->
+        prefs[Keys.LAST_DATA_CHANGE_MILLIS] ?: 0L
+    }
+
     val accountSession: Flow<AccountSession?> = safeData.map { prefs ->
         prefs[Keys.ACCOUNT_SESSION_JSON]?.let { raw ->
             runCatching { json.decodeFromString<AccountSession>(raw) }.getOrNull()
         }
+    }
+
+    val localDataOwnerUserId: Flow<String?> = safeData.map { prefs ->
+        prefs[Keys.LOCAL_DATA_OWNER_USER_ID]
     }
 
     val pendingTombstones: Flow<List<SyncTombstone>> = safeData.map { prefs ->
@@ -164,7 +179,18 @@ class UserPreferencesDataStore @Inject constructor(
     }
 
     suspend fun markDataChanged(): AppResult<Unit> = safeEdit { prefs ->
+        val now = System.currentTimeMillis()
         prefs[Keys.DATA_CHANGED_SINCE_BACKUP] = true
+        prefs[Keys.HAS_UNSYNCED_CLOUD_CHANGES] = true
+        prefs[Keys.LAST_DATA_CHANGE_MILLIS] = now
+    }
+
+    suspend fun markCloudChangesSynced(snapshotChangeMillis: Long): AppResult<Unit> = safeEdit { prefs ->
+        val latest = prefs[Keys.LAST_DATA_CHANGE_MILLIS] ?: 0L
+        // Clear pending flag only if no newer local edit occurred while sync was running
+        if (latest <= snapshotChangeMillis) {
+            prefs[Keys.HAS_UNSYNCED_CLOUD_CHANGES] = false
+        }
     }
 
     suspend fun saveAccountSession(session: AccountSession?): AppResult<Unit> = safeEdit { prefs ->
@@ -173,6 +199,39 @@ class UserPreferencesDataStore @Inject constructor(
         } else {
             prefs[Keys.ACCOUNT_SESSION_JSON] = json.encodeToString(session)
         }
+    }
+
+    suspend fun saveLocalDataOwnerUserId(userId: String?): AppResult<Unit> = safeEdit { prefs ->
+        if (userId.isNullOrBlank()) {
+            prefs.remove(Keys.LOCAL_DATA_OWNER_USER_ID)
+        } else {
+            prefs[Keys.LOCAL_DATA_OWNER_USER_ID] = userId
+        }
+    }
+
+    suspend fun clearAllSyncTombstones(): AppResult<Unit> = safeEdit { prefs ->
+        prefs.remove(Keys.SYNC_TOMBSTONES_JSON)
+    }
+
+    suspend fun resetAccountScopedPreferences(): AppResult<Unit> = safeEdit { prefs ->
+        prefs.remove(Keys.ACCOUNT_SESSION_JSON)
+        prefs.remove(Keys.LOCAL_DATA_OWNER_USER_ID)
+        prefs.remove(Keys.SYNC_TOMBSTONES_JSON)
+        prefs.remove(Keys.LAST_BACKUP_AT)
+        prefs.remove(Keys.DATA_CHANGED_SINCE_BACKUP)
+        prefs.remove(Keys.HAS_UNSYNCED_CLOUD_CHANGES)
+        prefs.remove(Keys.LAST_DATA_CHANGE_MILLIS)
+        prefs.remove(Keys.REMINDER_VISIT_ENABLED)
+        prefs.remove(Keys.REMINDER_VISIT_HOUR)
+        prefs.remove(Keys.REMINDER_VISIT_30M_ENABLED)
+        prefs.remove(Keys.REMINDER_VISIT_AT_TIME_ENABLED)
+        prefs.remove(Keys.REMINDER_CUSTOM_LEAD_MINUTES)
+        prefs.remove(Keys.REMINDER_ALARM_SOUND_MODE)
+        prefs.remove(Keys.REMINDER_PREPARE_ENABLED)
+        prefs.remove(Keys.REMINDER_FOLLOWUP_ENABLED)
+        prefs.remove(Keys.REMINDER_FOLLOWUP_HOUR)
+        prefs.remove(Keys.REMINDER_BACKUP_ENABLED)
+        prefs.remove(Keys.NOTIF_SHOW_TITLE)
     }
 
     suspend fun updateLastSyncAt(epochMillis: Long): AppResult<Unit> = safeEdit { prefs ->

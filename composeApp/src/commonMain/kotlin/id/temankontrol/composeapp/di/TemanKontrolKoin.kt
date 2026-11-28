@@ -1,5 +1,7 @@
 package id.temankontrol.composeapp.di
 
+import id.temankontrol.composeapp.data.KmpAppStore
+import id.temankontrol.composeapp.data.SupabaseKmpApiClient
 import id.temankontrol.composeapp.platform.*
 import id.temankontrol.shared.dto.*
 import io.ktor.client.*
@@ -16,7 +18,7 @@ import org.koin.dsl.module
 
 class MultiplatformApiGateway(
     engine: HttpClientEngine = createHttpClientEngine(),
-    val baseUrl: String = "https://temankontrol.unand.tech"
+    val baseUrl: String = SupabaseKmpApiClient.DEFAULT_BASE_URL
 ) {
     private val client = HttpClient(engine) {
         install(ContentNegotiation) {
@@ -37,6 +39,18 @@ val sharedKmpModule = module {
     single { createPlatformMediaAdapter() }
     single { createPlatformBiometricAuth() }
     single { createPlatformPdfExporter() }
+    single { createPlatformLocalStore() }
+    single { createPlatformMediaActions() }
+    single { createPlatformShareBridge() }
+    single { SupabaseKmpApiClient(engine = createHttpClientEngine()) }
+    single {
+        KmpAppStore(
+            localStore = get(),
+            apiClient = get(),
+            alarmScheduler = get(),
+            pdfExporter = get()
+        )
+    }
     single { MultiplatformApiGateway() }
 }
 

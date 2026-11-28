@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Account login & Offline-First Cloud Sync via api.temankontrol.unand.tech (DEC-033) -->
+    <!-- Account login & Offline-First Cloud Sync via Supabase -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Voice Note recording (requested contextually in F-13) -->
@@ -62,6 +62,11 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <service
+            android:name=".data.sync.CloudSyncJobService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

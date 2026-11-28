@@ -25,7 +25,8 @@ data class AccountUiState(
     val isBusy: Boolean = false,
     val busyMessage: String? = null,
     val errorMessage: String? = null,
-    val statusMessage: String? = null
+    val statusMessage: String? = null,
+    val logoutBackupFailed: Boolean = false
 )
 
 @HiltViewModel
@@ -40,20 +41,23 @@ class AccountViewModel @Inject constructor(
     private val _busyMessage = MutableStateFlow<String?>(null)
     private val _error = MutableStateFlow<String?>(null)
     private val _status = MutableStateFlow<String?>(null)
+    private val _logoutBackupFailed = MutableStateFlow(false)
 
     val uiState: StateFlow<AccountUiState> = combine(
         preferencesRepository.accountSession,
         _busy,
         _busyMessage,
         _error,
-        _status
-    ) { session, busy, busyMsg, err, status ->
+        _status,
+        _logoutBackupFailed
+    ) { values ->
         AccountUiState(
-            session = session,
-            isBusy = busy,
-            busyMessage = busyMsg,
-            errorMessage = err,
-            statusMessage = status
+            session = values[0] as AccountSession?,
+            isBusy = values[1] as Boolean,
+            busyMessage = values[2] as String?,
+            errorMessage = values[3] as String?,
+            statusMessage = values[4] as String?,
+            logoutBackupFailed = values[5] as Boolean
         )
     }.stateIn(
         scope = viewModelScope,
@@ -64,6 +68,7 @@ class AccountViewModel @Inject constructor(
     fun clearFeedback() {
         _error.value = null
         _status.value = null
+        _logoutBackupFailed.value = false
     }
 
     fun login(
@@ -132,7 +137,7 @@ class AccountViewModel @Inject constructor(
             _busyMessage.value = if (forceFullRestore) {
                 "Memulihkan data akun Anda…"
             } else {
-                "Menyinkronkan data ke temankontrol.unand.tech…"
+                "Menyinkronkan data ke cloud…"
             }
             _error.value = null
             _status.value = null
@@ -195,12 +200,39 @@ class AccountViewModel @Inject constructor(
         }
     }
 
-    fun logout(onLoggedOut: () -> Unit) {
+    fun logout(
+        forceWithoutBackup: Boolean = false,
+        onLoggedOut: () -> Unit = {}
+    ) {
         viewModelScope.launch {
             _busy.value = true
-            syncEngine.logout()
-            _busy.value = false
-            onLoggedOut()
+            _busyMessage.value = if (forceWithoutBackup) {
+                "Mengosongkan data lokal & keluar dari akun…"
+            } else {
+                "Mencadangkan data akun ke cloud sebelum keluar…"
+            }
+            _error.value = null
+            _status.value = null
+            _logoutBackupFailed.value = false
+            when (val res = syncEngine.logout(forceWithoutBackup)) {
+                is AppResult.Success -> {
+                    reminderScheduler.rescheduleAll()
+                    _busy.value = false
+                    _busyMessage.value = null
+                    _status.value = if (forceWithoutBackup) {
+                        "Keluar dari akun & data lokal telah dikosongkan."
+                    } else {
+                        "Data dicadangkan ke cloud & perangkat dikosongkan. Anda dapat masuk dengan akun lain."
+                    }
+                    onLoggedOut()
+                }
+                is AppResult.Failure -> {
+                    _error.value = extractMessage(res.error, "Gagal mencadangkan data sebelum keluar.")
+                    _logoutBackupFailed.value = true
+                    _busy.value = false
+                    _busyMessage.value = null
+                }
+            }
         }
     }
 

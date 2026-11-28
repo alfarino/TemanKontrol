@@ -320,7 +320,7 @@ private fun DashboardGreetingHeader(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = if (accountSession != null) "Tersinkron • unand.tech" else "Mode Lokal • Login",
+                    text = if (accountSession != null) "Tersinkron • Cloud" else "Mode Lokal • Login",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSecondaryContainer

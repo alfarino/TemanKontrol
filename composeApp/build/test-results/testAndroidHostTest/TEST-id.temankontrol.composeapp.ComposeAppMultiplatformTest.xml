@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="id.temankontrol.composeapp.ComposeAppMultiplatformTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-26T09:44:32.569Z" hostname="ALPHA-DSKTP1385" time="0.197">
+<testsuite name="id.temankontrol.composeapp.ComposeAppMultiplatformTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-28T11:11:04.654Z" hostname="ALPHA-DSKTP1385" time="0.297">
   <properties/>
-  <testcase name="kmpAdaptersAndGateway_workInCommonTest" classname="id.temankontrol.composeapp.ComposeAppMultiplatformTest" time="0.194"/>
+  <testcase name="kmpAdaptersAndGateway_workInCommonTest" classname="id.temankontrol.composeapp.ComposeAppMultiplatformTest" time="0.177"/>
+  <testcase name="kmpStoreCrudValidationDateAndPortableBackup_workEndToEnd" classname="id.temankontrol.composeapp.ComposeAppMultiplatformTest" time="0.054"/>
+  <testcase name="kmpSupabaseSync_autoSyncAndAccountSwitchIsolation_workReliably" classname="id.temankontrol.composeapp.ComposeAppMultiplatformTest" time="0.063"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[SLF4J(W): No SLF4J providers were found.
 SLF4J(W): Defaulting to no-operation (NOP) logger implementation

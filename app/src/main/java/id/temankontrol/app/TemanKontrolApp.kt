@@ -7,6 +7,7 @@ import id.temankontrol.app.data.local.dao.AttachmentDao
 import id.temankontrol.app.data.media.MediaAttachmentManager
 import id.temankontrol.app.data.reminder.ReminderNotificationHelper
 import id.temankontrol.app.data.reminder.ReminderScheduler
+import id.temankontrol.app.data.sync.CloudAutoSyncCoordinator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,6 +25,9 @@ class TemanKontrolApp : Application() {
 
     @Inject
     lateinit var reminderScheduler: ReminderScheduler
+
+    @Inject
+    lateinit var cloudAutoSyncCoordinator: CloudAutoSyncCoordinator
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -47,6 +51,7 @@ class TemanKontrolApp : Application() {
             )
         }
         ReminderNotificationHelper.ensureChannels(this)
+        cloudAutoSyncCoordinator.start()
         appScope.launch {
             mediaAttachmentManager.cleanupOrphanFiles(attachmentDao)
             reminderScheduler.rescheduleAll()

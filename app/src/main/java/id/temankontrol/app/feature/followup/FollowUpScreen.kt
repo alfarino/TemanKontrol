@@ -1,5 +1,6 @@
-﻿package id.temankontrol.app.feature.followup
+package id.temankontrol.app.feature.followup
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -14,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -93,7 +95,8 @@ fun FollowUpContent(
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
                 text = { Text(stringResource(R.string.action_add_follow_up)) },
                 containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = RoundedCornerShape(16.dp)
             )
         },
         modifier = modifier
@@ -118,10 +121,10 @@ fun FollowUpContent(
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         end = 16.dp,
-                        top = padding.calculateTopPadding() + 8.dp,
-                        bottom = padding.calculateBottomPadding() + 88.dp
+                        top = padding.calculateTopPadding() + 10.dp,
+                        bottom = padding.calculateBottomPadding() + 92.dp
                     ),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     if (openActions.isNotEmpty()) {
@@ -129,79 +132,122 @@ fun FollowUpContent(
                             Text(
                                 text = "Belum Selesai (${openActions.size})",
                                 style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(vertical = 4.dp)
                             )
                         }
                         items(openActions, key = { it.id }) { action ->
-                            Card(
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                ),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                val isPast = Validation.isDueDatePast(action.dueDate)
-                                ChecklistItem(
-                                    title = action.text,
-                                    checked = action.isCompleted,
-                                    onCheckedChange = { onToggleCompleted(action.id, it) },
-                                    dueDate = action.dueDate,
-                                    isPastDue = isPast,
-                                    trailingContent = {
-                                        Row {
-                                            IconButton(onClick = { onEditClick(action) }) {
-                                                Icon(Icons.Default.Edit, contentDescription = "Ubah", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            }
-                                            IconButton(onClick = { onDeleteClick(action) }) {
-                                                Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error)
-                                            }
-                                        }
-                                    }
-                                )
-                            }
+                            FollowUpActionCard(
+                                action = action,
+                                isPastDue = Validation.isDueDatePast(action.dueDate),
+                                onToggleCompleted = { onToggleCompleted(action.id, it) },
+                                onEditClick = { onEditClick(action) },
+                                onDeleteClick = { onDeleteClick(action) }
+                            )
                         }
                     }
 
                     if (completedActions.isNotEmpty()) {
                         item {
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = "Selesai (${completedActions.size})",
                                 style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(vertical = 4.dp)
                             )
                         }
                         items(completedActions, key = { it.id }) { action ->
-                            Card(
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                                ),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                ChecklistItem(
-                                    title = action.text,
-                                    checked = action.isCompleted,
-                                    onCheckedChange = { onToggleCompleted(action.id, it) },
-                                    dueDate = action.dueDate,
-                                    trailingContent = {
-                                        Row {
-                                            IconButton(onClick = { onEditClick(action) }) {
-                                                Icon(Icons.Default.Edit, contentDescription = "Ubah", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            }
-                                            IconButton(onClick = { onDeleteClick(action) }) {
-                                                Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error)
-                                            }
-                                        }
-                                    }
-                                )
-                            }
+                            FollowUpActionCard(
+                                action = action,
+                                isPastDue = false,
+                                onToggleCompleted = { onToggleCompleted(action.id, it) },
+                                onEditClick = { onEditClick(action) },
+                                onDeleteClick = { onDeleteClick(action) }
+                            )
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FollowUpActionCard(
+    action: FollowUpAction,
+    isPastDue: Boolean,
+    onToggleCompleted: (Boolean) -> Unit,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    var showMenu by remember { mutableStateOf(false) }
+
+    ElevatedCard(
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = if (action.isCompleted) {
+                MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = if (action.isCompleted) 0.dp else 2.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.14f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            ChecklistItem(
+                title = action.text,
+                checked = action.isCompleted,
+                onCheckedChange = onToggleCompleted,
+                dueDate = action.dueDate,
+                isPastDue = isPastDue,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                trailingContent = {
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "Opsi tindak lanjut"
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Ubah") },
+                                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                                onClick = {
+                                    showMenu = false
+                                    onEditClick()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Hapus", color = MaterialTheme.colorScheme.error) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    onDeleteClick()
+                                }
+                            )
+                        }
+                    }
+                }
+            )
         }
     }
 }
