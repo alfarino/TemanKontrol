@@ -8,10 +8,20 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.biometric.BiometricPrompt
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
@@ -26,6 +36,7 @@ import id.temankontrol.app.domain.repository.PreferencesRepository
 import id.temankontrol.app.feature.lock.AppLockOverlay
 import id.temankontrol.app.navigation.AppNavHost
 import id.temankontrol.app.ui.theme.TemanKontrolTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -87,16 +98,24 @@ class MainActivity : FragmentActivity() {
         setContent {
             val isNoticeAccepted by preferencesRepository.noticeAccepted
                 .collectAsStateWithLifecycle(initialValue = initialNoticeAccepted)
+            var showBrandedIntro by remember { mutableStateOf(true) }
+
+            LaunchedEffect(initialReady) {
+                if (initialReady) {
+                    delay(650L)
+                    showBrandedIntro = false
+                }
+            }
 
             if (initialReady) {
                 TemanKontrolTheme {
                     Surface(modifier = Modifier.fillMaxSize()) {
-                        if (isLocked) {
-                            AppLockOverlay(
+                        when {
+                            showBrandedIntro -> BrandedSplashScreen()
+                            isLocked -> AppLockOverlay(
                                 onUnlockClick = { showBiometricPrompt() }
                             )
-                        } else {
-                            AppNavHost(
+                            else -> AppNavHost(
                                 isNoticeAccepted = isNoticeAccepted,
                                 deepLinkConsultationId = deepLinkConsultationId,
                                 deepLinkOpenBackup = deepLinkOpenBackup,
@@ -182,5 +201,42 @@ class MainActivity : FragmentActivity() {
             .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
             .build()
         prompt.authenticate(promptInfo)
+    }
+}
+
+@Composable
+private fun BrandedSplashScreen() {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.linearGradient(
+                    listOf(Color(0xFF0E8489), Color(0xFF0B6E72), Color(0xFF064A4E))
+                )
+            )
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(32.dp)
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.ic_splash_logo),
+                contentDescription = "Logo Teman Kontrol",
+                modifier = Modifier.size(136.dp)
+            )
+            Text(
+                text = "Teman Kontrol",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White
+            )
+            Text(
+                text = "Pendamping Konsultasi Kesehatan",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.88f)
+            )
+        }
     }
 }

@@ -29,7 +29,14 @@
 	<key>NSFaceIDUsageDescription</key>
 	<string>Gunakan Face ID untuk melindungi catatan kesehatan Anda di Teman Kontrol.</string>
 	<key>UILaunchScreen</key>
-	<dict/>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+		<key>UIImageName</key>
+		<string>SplashLogo</string>
+		<key>UIImageRespectsSafeAreaInsets</key>
+		<true/>
+	</dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 </dict>
